@@ -1,0 +1,26 @@
+{
+  "name": "@studigiital/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "generate": "openapi-ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hey-api/client-fetch": "^0.6.0"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.56.0",
+    "typescript": "^5.7.2"
+  }
+}

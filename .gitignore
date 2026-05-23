@@ -1,2 +1,52 @@
 # Local-only design context — not for public repo
 studigital-design-decisions.md
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+.next
+dist
+build
+out
+
+# Turborepo
+.turbo
+
+# Expo
+.expo
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build
+
+# Python
+__pycache__
+*.py[cod]
+*.pyo
+.venv
+venv
+*.egg-info
+.ruff_cache
+.mypy_cache
+.pytest_cache
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
