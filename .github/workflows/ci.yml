@@ -30,6 +30,9 @@ jobs:
       - name: Typecheck mobile
         run: pnpm --filter @studigiital/mobile typecheck
 
+      - name: Test mobile
+        run: pnpm --filter @studigiital/mobile test
+
   api-contract:
     name: API contract (stale check)
     runs-on: ubuntu-latest
