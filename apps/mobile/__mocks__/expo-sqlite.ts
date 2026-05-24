@@ -1,4 +1,4 @@
-// In-memory mock for expo-sqlite — only handles the SQL patterns used by capture-queue.ts
+// In-memory mock for expo-sqlite — handles SQL patterns used by capture-queue.ts and capture-mode-prefs.ts
 
 interface QueueRow {
   id: string;
@@ -10,9 +10,11 @@ interface QueueRow {
 }
 
 const _rows: QueueRow[] = [];
+const _prefs = new Map<string, string>();
 
 export function __reset(): void {
   _rows.length = 0;
+  _prefs.clear();
 }
 
 const _db = {
@@ -42,10 +44,18 @@ const _db = {
       const [status, id] = params as [string, string];
       const row = _rows.find((r) => r.id === id);
       if (row) row.status = status;
+    } else if (sql.startsWith("INSERT OR REPLACE INTO prefs")) {
+      const [key, value] = params as [string, string];
+      _prefs.set(key, value);
     }
   },
 
-  async getAllAsync<T>(_sql: string, params: unknown[]): Promise<T[]> {
+  async getAllAsync<T>(sql: string, params: unknown[]): Promise<T[]> {
+    if (sql.startsWith("SELECT value FROM prefs")) {
+      const key = params[0] as string;
+      const value = _prefs.get(key);
+      return (value !== undefined ? [{ value }] : []) as unknown as T[];
+    }
     return _rows.filter((r) => r.status === params[0]) as unknown as T[];
   },
 };
