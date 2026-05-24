@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import artifacts, captures, tags
+from app.api.v1 import artifacts, captures, tags, users
 from app.core.config import settings
 
 app = FastAPI(
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(captures.router, prefix="/api/v1/captures", tags=["captures"])
 app.include_router(artifacts.router, prefix="/api/v1/artifacts", tags=["artifacts"])
 app.include_router(tags.router, prefix="/api/v1/tags", tags=["tags"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 
 
 @app.get("/health")

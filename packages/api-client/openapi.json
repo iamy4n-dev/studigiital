@@ -291,6 +291,102 @@
         }
       }
     },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Me",
+        "operationId": "get_me_api_v1_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserClaims"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/profile": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Profile",
+        "operationId": "get_profile_api_v1_users_profile_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create Profile",
+        "operationId": "create_profile_api_v1_users_profile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProfileIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -524,6 +620,67 @@
           "source_summary"
         ],
         "title": "TransformResponse"
+      },
+      "UserClaims": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "tier": {
+            "type": "string",
+            "title": "Tier",
+            "default": "free"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id"
+        ],
+        "title": "UserClaims"
+      },
+      "UserProfileIn": {
+        "properties": {
+          "learning_type": {
+            "type": "string",
+            "enum": [
+              "language_learner",
+              "professional",
+              "student",
+              "generic"
+            ],
+            "title": "Learning Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "learning_type"
+        ],
+        "title": "UserProfileIn"
+      },
+      "UserProfileOut": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "learning_type": {
+            "type": "string",
+            "enum": [
+              "language_learner",
+              "professional",
+              "student",
+              "generic"
+            ],
+            "title": "Learning Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "learning_type"
+        ],
+        "title": "UserProfileOut"
       },
       "ValidationError": {
         "properties": {

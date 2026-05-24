@@ -53,6 +53,22 @@ export type TransformResponse = {
     source_summary: string;
 };
 
+export type UserClaims = {
+    user_id: string;
+    tier?: string;
+};
+
+export type UserProfileIn = {
+    learning_type: 'language_learner' | 'professional' | 'student' | 'generic';
+};
+
+export type learning_type = 'language_learner' | 'professional' | 'student' | 'generic';
+
+export type UserProfileOut = {
+    user_id: string;
+    learning_type: 'language_learner' | 'professional' | 'student' | 'generic';
+};
+
 export type ValidationError = {
     loc: Array<(string | number)>;
     msg: string;
@@ -98,6 +114,16 @@ export type GetTagApiV1TagsTagIdGetData = {
 };
 
 export type GetTagApiV1TagsTagIdGetResponse = (TagOut);
+
+export type GetMeApiV1UsersMeGetResponse = (UserClaims);
+
+export type GetProfileApiV1UsersProfileGetResponse = (UserProfileOut);
+
+export type CreateProfileApiV1UsersProfilePostData = {
+    requestBody: UserProfileIn;
+};
+
+export type CreateProfileApiV1UsersProfilePostResponse = (UserProfileOut);
 
 export type HealthHealthGetResponse = ({
     [key: string]: (string);

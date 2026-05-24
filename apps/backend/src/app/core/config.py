@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     s3_bucket: str = "studigiital-media"
     clerk_secret_key: str = ""
     clerk_jwks_url: str = "https://api.clerk.com/v1/jwks"
+    dev_mode: bool = False
 
 
 settings = Settings()
