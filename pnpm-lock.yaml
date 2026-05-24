@@ -108,10 +108,6 @@ importers:
         version: 5.9.3
 
   packages/api-client:
-    dependencies:
-      '@hey-api/client-fetch':
-        specifier: ^0.6.0
-        version: 0.6.0
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: ^0.56.0
@@ -1010,7 +1006,7 @@ packages:
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
-    engines: {'0': node >=0.10.0}
+    engines: {node: '>=0.10.0'}
 
   '@expo/cli@0.22.28':
     resolution: {integrity: sha512-lvt72KNitGuixYD2l3SZmRKVu2G4zJpmg5V7WfUBNpmUU5oODBw/6qmiJ6kSLAlfDozscUk+BBGknBBzxUrwrA==}
@@ -1132,10 +1128,6 @@ packages:
 
   '@formkit/auto-animate@0.8.4':
     resolution: {integrity: sha512-DHHC01EJ1p70Q0z/ZFRBIY8NDnmfKccQoyoM84Tgb6omLMat6jivCdf272Y8k3nf4Lzdin/Y4R9q8uFtU0GbnA==}
-
-  '@hey-api/client-fetch@0.6.0':
-    resolution: {integrity: sha512-FlhFsVeH8RxJe/nq8xUzxNbiOpe+GadxlD2pfvDyOyLdCTU4o/LRv46ZVWstaW7DgF4nxhI328chy3+AulwVXw==}
-    deprecated: Starting with v0.73.0, this package is bundled directly inside @hey-api/openapi-ts.
 
   '@hey-api/openapi-ts@0.56.3':
     resolution: {integrity: sha512-8tXjZJzVD/+S2MGIxsblPtETu9KdmXNPIvWmLnDTNyYNh101gBCu83A1XvSb2kjr7prxxzodcXDxneSUPgagmQ==}
@@ -6413,8 +6405,6 @@ snapshots:
 
   '@formkit/auto-animate@0.8.4': {}
 
-  '@hey-api/client-fetch@0.6.0': {}
-
   '@hey-api/openapi-ts@0.56.3(typescript@5.9.3)':
     dependencies:
       '@apidevtools/json-schema-ref-parser': 11.7.2
@@ -7278,7 +7268,7 @@ snapshots:
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 20.19.41
+      '@types/node': 22.19.19
 
   '@types/graceful-fs@4.1.9':
     dependencies:
@@ -7333,11 +7323,11 @@ snapshots:
 
   '@types/ws@7.4.7':
     dependencies:
-      '@types/node': 20.19.41
+      '@types/node': 22.19.19
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 20.19.41
+      '@types/node': 22.19.19
 
   '@types/yargs-parser@21.0.3': {}
 
