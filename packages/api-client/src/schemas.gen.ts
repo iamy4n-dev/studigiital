@@ -186,6 +186,53 @@ export const TransformResponseSchema = {
     title: 'TransformResponse'
 } as const;
 
+export const UserClaimsSchema = {
+    properties: {
+        user_id: {
+            type: 'string',
+            title: 'User Id'
+        },
+        tier: {
+            type: 'string',
+            title: 'Tier',
+            default: 'free'
+        }
+    },
+    type: 'object',
+    required: ['user_id'],
+    title: 'UserClaims'
+} as const;
+
+export const UserProfileInSchema = {
+    properties: {
+        learning_type: {
+            type: 'string',
+            enum: ['language_learner', 'professional', 'student', 'generic'],
+            title: 'Learning Type'
+        }
+    },
+    type: 'object',
+    required: ['learning_type'],
+    title: 'UserProfileIn'
+} as const;
+
+export const UserProfileOutSchema = {
+    properties: {
+        user_id: {
+            type: 'string',
+            title: 'User Id'
+        },
+        learning_type: {
+            type: 'string',
+            enum: ['language_learner', 'professional', 'student', 'generic'],
+            title: 'Learning Type'
+        }
+    },
+    type: 'object',
+    required: ['user_id', 'learning_type'],
+    title: 'UserProfileOut'
+} as const;
+
 export const ValidationErrorSchema = {
     properties: {
         loc: {

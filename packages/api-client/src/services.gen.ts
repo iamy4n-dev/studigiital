@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { TransformCaptureApiV1CapturesTransformPostData, TransformCaptureApiV1CapturesTransformPostResponse, ListCapturesApiV1CapturesGetResponse, CreateCaptureApiV1CapturesPostData, CreateCaptureApiV1CapturesPostResponse, GetCaptureApiV1CapturesCaptureIdGetData, GetCaptureApiV1CapturesCaptureIdGetResponse, GetArtifactApiV1ArtifactsArtifactIdGetData, GetArtifactApiV1ArtifactsArtifactIdGetResponse, ListArtifactsApiV1ArtifactsGetResponse, ListTagsApiV1TagsGetResponse, GetTagApiV1TagsTagIdGetData, GetTagApiV1TagsTagIdGetResponse, HealthHealthGetResponse } from './types.gen';
+import type { TransformCaptureApiV1CapturesTransformPostData, TransformCaptureApiV1CapturesTransformPostResponse, ListCapturesApiV1CapturesGetResponse, CreateCaptureApiV1CapturesPostData, CreateCaptureApiV1CapturesPostResponse, GetCaptureApiV1CapturesCaptureIdGetData, GetCaptureApiV1CapturesCaptureIdGetResponse, GetArtifactApiV1ArtifactsArtifactIdGetData, GetArtifactApiV1ArtifactsArtifactIdGetResponse, ListArtifactsApiV1ArtifactsGetResponse, ListTagsApiV1TagsGetResponse, GetTagApiV1TagsTagIdGetData, GetTagApiV1TagsTagIdGetResponse, GetMeApiV1UsersMeGetResponse, GetProfileApiV1UsersProfileGetResponse, CreateProfileApiV1UsersProfilePostData, CreateProfileApiV1UsersProfilePostResponse, HealthHealthGetResponse } from './types.gen';
 
 /**
  * Transform Capture
@@ -133,6 +133,49 @@ export const getTagApiV1TagsTagIdGet = (data: GetTagApiV1TagsTagIdGetData): Canc
         path: {
             tag_id: data.tagId
         },
+        errors: {
+            422: 'Validation Error'
+        }
+    });
+};
+
+/**
+ * Get Me
+ * @returns UserClaims Successful Response
+ * @throws ApiError
+ */
+export const getMeApiV1UsersMeGet = (): CancelablePromise<GetMeApiV1UsersMeGetResponse> => {
+    return __request(OpenAPI, {
+        method: 'GET',
+        url: '/api/v1/users/me'
+    });
+};
+
+/**
+ * Get Profile
+ * @returns UserProfileOut Successful Response
+ * @throws ApiError
+ */
+export const getProfileApiV1UsersProfileGet = (): CancelablePromise<GetProfileApiV1UsersProfileGetResponse> => {
+    return __request(OpenAPI, {
+        method: 'GET',
+        url: '/api/v1/users/profile'
+    });
+};
+
+/**
+ * Create Profile
+ * @param data The data for the request.
+ * @param data.requestBody
+ * @returns UserProfileOut Successful Response
+ * @throws ApiError
+ */
+export const createProfileApiV1UsersProfilePost = (data: CreateProfileApiV1UsersProfilePostData): CancelablePromise<CreateProfileApiV1UsersProfilePostResponse> => {
+    return __request(OpenAPI, {
+        method: 'POST',
+        url: '/api/v1/users/profile',
+        body: data.requestBody,
+        mediaType: 'application/json',
         errors: {
             422: 'Validation Error'
         }
