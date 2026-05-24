@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Studigital",
   description: "Capture, transform, and review your learning moments",

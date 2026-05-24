@@ -8,7 +8,7 @@ class ArtifactOut(BaseModel):
     id: str
     capture_id: str
     artifact_type: str  # "note" | "flashcard" | "quiz"
-    content: dict
+    content: dict[str, object]
     created_at: str
 
 
