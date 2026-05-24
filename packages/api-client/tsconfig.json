@@ -3,7 +3,8 @@
   "compilerOptions": {
     "outDir": "./dist",
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["src", "openapi-ts.config.ts"]
 }

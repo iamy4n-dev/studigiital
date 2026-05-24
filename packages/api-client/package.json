@@ -16,9 +16,6 @@
     "generate": "openapi-ts",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@hey-api/client-fetch": "^0.6.0"
-  },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.56.0",
     "typescript": "^5.7.2"
