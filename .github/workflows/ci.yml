@@ -61,10 +61,9 @@ jobs:
 
       - name: Export OpenAPI spec from FastAPI
         working-directory: apps/backend
-        run: >
-          uv run python -c
-          "from app.main import app; import json; print(json.dumps(app.openapi(), indent=2))"
-          > ../packages/api-client/openapi.json
+        run: |
+          uv run python -c "from app.main import app; import json; print(json.dumps(app.openapi(), indent=2))" \
+            > ../../packages/api-client/openapi.json
 
       - name: Regenerate TypeScript client
         run: pnpm run generate:api-client
