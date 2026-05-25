@@ -1,4 +1,4 @@
-# Studigital
+# studigiital
 
 A microlearning app. Capture real-life learning material (handwritten notes, quick memos, book pages), transform it via LLM into flashcards, notes, or quizzes, and review it later. The core loop — **Capture → Transform → Tagged artifact** — completes in under 2 minutes.
 
@@ -29,12 +29,13 @@ skills/        Python LLM skill classes (one per transformation type)
 
 ## Prerequisites
 
-| Tool | Version |
-|------|---------|
-| Node | 20 |
-| pnpm | 9 (see `packageManager` in root `package.json`) |
-| Python | 3.12 |
-| uv | 0.11+ |
+| Tool | Version | Install |
+|------|---------|---------|
+| Node | 20 | `nvm install 20` |
+| pnpm | 9.15 | `npm i -g pnpm@9.15` |
+| Python | 3.12 | `pyenv install 3.12` |
+| uv | 0.11+ | `curl -Lsf https://astral.sh/uv/install.sh \| sh` |
+| Expo Go | latest | iOS / Android App Store |
 
 ---
 
@@ -48,11 +49,58 @@ cp apps/mobile/.env.example apps/mobile/.env       # defaults work for local dev
 # 2. Install everything
 make install
 
-# 3. Start the backend (FastAPI on :8000)
+# 3. Start the backend (FastAPI on :8000) — always needs its own terminal
 make backend-dev
 
-# 4. Start the mobile app (Expo dev client)
-pnpm --filter @studigiital/mobile start
+# 4. Start the mobile app (Expo dev client — scan QR in Expo Go)
+make mobile-dev
+```
+
+---
+
+## Running the app
+
+Each app can be started independently. Open separate terminals for backend + frontend.
+
+### Mobile (Expo)
+
+```bash
+make mobile-dev      # Metro bundler — scan QR in Expo Go, or press i/a
+make mobile-ios      # Open directly in iOS simulator (requires Xcode)
+make mobile-android  # Open directly in Android emulator (requires Android Studio)
+```
+
+`make dev` runs mobile + web via Turbo in parallel. Backend is always a separate terminal.
+
+### Web (Next.js)
+
+```bash
+make web-dev   # http://localhost:3000
+```
+
+### Backend (FastAPI)
+
+```bash
+make backend-dev   # http://localhost:8000
+                   # Swagger UI at http://localhost:8000/docs
+```
+
+`DEV_MODE=true` in `apps/backend/.env` bypasses Clerk JWT auth. Required for local dev unless you configure Clerk keys.
+
+---
+
+## Maintenance
+
+Use these when dependencies or build state are stale.
+
+```bash
+make clean   # Remove .turbo cache, .expo, .next, and dist dirs.
+             # Keeps node_modules and .venv — fast, safe to run anytime.
+
+make reset   # Full nuke: clean + remove all node_modules and .venv,
+             # then reinstall from scratch (slow, ~2-3 min).
+             # Use when: pnpm install behaves strangely, you switch branches
+             # with different dep versions, or CI passes but local fails.
 ```
 
 ---
@@ -69,9 +117,15 @@ make spec               Export OpenAPI spec from FastAPI + regenerate TS client
 make generate           Regenerate TS client from committed openapi.json (no Python needed)
 
 make backend-dev        Start FastAPI dev server on :8000
-make backend-lint        Ruff lint check
-make backend-typecheck   Mypy type check
-make backend-test        Run backend tests
+make mobile-dev         Start Expo Metro bundler
+make mobile-ios         Launch in iOS simulator
+make mobile-android     Launch in Android emulator
+make web-dev            Start Next.js on :3000
+make dev                Start mobile + web in parallel (Turbo)
+
+make backend-lint       Ruff lint check
+make backend-typecheck  Mypy type check
+make backend-test       Run backend tests
 
 make ci                 Run all CI checks locally (lint + typecheck + test + build)
 ```
@@ -100,7 +154,7 @@ The TypeScript client in `packages/api-client/` is **always generated** — neve
 2. `hey-api` generates typed TypeScript clients from `packages/api-client/openapi.json`
 3. CI checks that the committed client matches the live spec (`git diff --exit-code`)
 
-If you change a FastAPI route or schema, run `make spec` and commit the regenerated files.
+If you change a FastAPI route or schema, run `make spec` and commit the regenerated files. See [docs/ci.md](docs/ci.md) for the fix-locally commands.
 
 ---
 
@@ -113,6 +167,8 @@ If you change a FastAPI route or schema, run `make spec` and commit the regenera
 **LLM skills:** Each skill in `skills/` is a self-contained Python class — prompt template, input/output schema, model config, tools. A skill registry routes each capture to the correct skill. Transformation skills (`generate-flashcard`, `generate-note`, `generate-quiz`) use tier-based model routing — free tier gets Gemma 4-class models, paid tier gets Claude/GPT-4-class.
 
 **Storage:** AWS RDS PostgreSQL for structured data + AWS S3 for raw media and export files. Presigned URLs for mobile uploads.
+
+See [apps/mobile/ARCHITECTURE.md](apps/mobile/ARCHITECTURE.md) and [apps/backend/ARCHITECTURE.md](apps/backend/ARCHITECTURE.md) for module maps and data flow.
 
 ---
 
@@ -130,7 +186,8 @@ If you change a FastAPI route or schema, run `make spec` and commit the regenera
 ## Contributing
 
 - All changes go on a dedicated branch and merge via PR — never push directly to `main`.
-- Branch naming: `feat/<slug>`, `fix/<slug>`, `scaffold/<slug>`.
+- Branch naming: `feat/<slug>`, `fix/<slug>`, `chore/<slug>`.
+- `make ci` before pushing — catches lint, type, and test failures locally.
 - CI runs on every push: build, lint, typecheck (mobile), tests (mobile + backend), API contract staleness check. See [docs/ci.md](docs/ci.md) for what each job checks and how to fix failures locally.
 - For agent context and codebase conventions, see [CLAUDE.md](CLAUDE.md).
 - For product decisions and design rationale, see [studigital-design-decisions.md](studigital-design-decisions.md).

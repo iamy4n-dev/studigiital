@@ -1,5 +1,7 @@
 .PHONY: install build typecheck generate spec \
-        backend-dev backend-lint backend-typecheck backend-test \
+        dev backend-dev mobile-dev mobile-ios mobile-android web-dev \
+        backend-lint backend-typecheck backend-test \
+        clean reset \
         ci help
 
 # ── Install ───────────────────────────────────────────────────────────────────
@@ -7,6 +9,26 @@
 install: ## Install all JS + Python deps
 	pnpm install
 	cd apps/backend && uv sync --all-extras
+
+# ── Dev servers ───────────────────────────────────────────────────────────────
+
+dev: ## Start mobile + web dev servers in parallel (backend needs a separate terminal)
+	pnpm turbo dev
+
+backend-dev: ## Start FastAPI dev server on :8000
+	cd apps/backend && uv run uvicorn app.main:app --reload --port 8000
+
+mobile-dev: ## Start Expo Metro bundler (scan QR in Expo Go or press i/a for simulator)
+	pnpm --filter @studigiital/mobile start
+
+mobile-ios: ## Launch mobile app in iOS simulator
+	pnpm --filter @studigiital/mobile ios
+
+mobile-android: ## Launch mobile app in Android emulator
+	pnpm --filter @studigiital/mobile android
+
+web-dev: ## Start Next.js dev server on :3000
+	pnpm --filter @studigiital/web dev
 
 # ── JS / Turbo ────────────────────────────────────────────────────────────────
 
@@ -27,9 +49,6 @@ spec: ## Export OpenAPI spec from FastAPI, then regenerate client
 
 # ── Backend ───────────────────────────────────────────────────────────────────
 
-backend-dev: ## Start FastAPI dev server on :8000
-	cd apps/backend && uv run uvicorn app.main:app --reload --port 8000
-
 backend-lint: ## Ruff lint check
 	cd apps/backend && uv run ruff check .
 
@@ -38,6 +57,21 @@ backend-typecheck: ## Mypy type check
 
 backend-test: ## Run backend tests
 	cd apps/backend && uv run pytest tests/ -v
+
+# ── Maintenance ───────────────────────────────────────────────────────────────
+
+clean: ## Remove build caches and Expo/Next.js output (keeps node_modules and .venv)
+	rm -rf .turbo apps/mobile/.expo apps/web/.next
+	find . -name dist -not -path "*/node_modules/*" -type d -exec rm -rf {} + 2>/dev/null || true
+
+reset: clean ## Nuke all deps then reinstall from scratch (use when deps are corrupted)
+	rm -rf node_modules \
+	       apps/mobile/node_modules \
+	       apps/web/node_modules \
+	       packages/api-client/node_modules \
+	       packages/types/node_modules \
+	       apps/backend/.venv
+	$(MAKE) install
 
 # ── CI (local) ────────────────────────────────────────────────────────────────
 
