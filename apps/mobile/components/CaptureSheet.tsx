@@ -20,11 +20,15 @@ import type { CaptureMode } from "../src/capture-mode-prefs";
 import { getLastMode, initModePrefs, setLastMode } from "../src/capture-mode-prefs";
 import { initQueue } from "../src/capture-queue";
 import { submitCapture } from "../src/capture-submit";
+import { fetchTagSuggestions } from "../src/tag-suggestions";
+import { getOrCreateTagColor, initTagStore } from "../src/tag-store";
 import { useSession } from "../src/session";
 
 type Phase =
   | { id: "mode_picker" }
   | { id: "quick_text" }
+  | { id: "suggesting_tags" }
+  | { id: "tag_confirmation"; suggestions: string[]; confirmed: string[] }
   | { id: "submitting" }
   | { id: "result"; result: TransformResponse }
   | { id: "queued" }
@@ -46,6 +50,7 @@ export default function CaptureSheet({ visible, onClose }: Props) {
 
   useEffect(() => {
     initQueue().catch(() => {});
+    initTagStore().catch(() => {});
     initModePrefs()
       .then(() => getLastMode())
       .then(setDefaultMode)
@@ -61,7 +66,17 @@ export default function CaptureSheet({ visible, onClose }: Props) {
 
   async function handleSubmit() {
     if (!text.trim()) return;
+    setPhase({ id: "suggesting_tags" });
+
+    const suggestions = await fetchTagSuggestions(text.trim());
+    setPhase({ id: "tag_confirmation", suggestions, confirmed: suggestions });
+  }
+
+  async function handleTagsConfirmed(confirmedTags: string[]) {
     setPhase({ id: "submitting" });
+
+    // Persist confirmed tags with consistent colors
+    await Promise.all(confirmedTags.map((name) => getOrCreateTagColor(name))).catch(() => {});
 
     const networkState = await Network.getNetworkStateAsync().catch(() => ({ isConnected: true, isInternetReachable: true }));
     const isOnline = !!(networkState.isConnected && networkState.isInternetReachable !== false);
@@ -112,6 +127,20 @@ export default function CaptureSheet({ visible, onClose }: Props) {
             placeholder={getPlaceholder(learningType)}
             onSubmit={handleSubmit}
             onBack={() => setPhase({ id: "mode_picker" })}
+          />
+        )}
+        {phase.id === "suggesting_tags" && (
+          <View style={styles.centred}>
+            <ActivityIndicator size="large" color="#000" />
+            <Text style={styles.hint}>Suggesting tags…</Text>
+          </View>
+        )}
+        {phase.id === "tag_confirmation" && (
+          <TagConfirmation
+            suggestions={phase.suggestions}
+            confirmed={phase.confirmed}
+            onConfirm={handleTagsConfirmed}
+            onBack={() => setPhase({ id: "quick_text" })}
           />
         )}
         {phase.id === "submitting" && (
@@ -202,6 +231,83 @@ function QuickTextInput({
         disabled={!text.trim()}
       >
         <Text style={styles.btnLabel}>Submit</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function TagConfirmation({
+  suggestions,
+  confirmed,
+  onConfirm,
+  onBack,
+}: {
+  suggestions: string[];
+  confirmed: string[];
+  onConfirm: (tags: string[]) => void;
+  onBack: () => void;
+}) {
+  const [selected, setSelected] = useState<string[]>(confirmed);
+  const [extra, setExtra] = useState("");
+
+  function toggle(tag: string) {
+    setSelected((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  }
+
+  function addExtra() {
+    const trimmed = extra.trim().toLowerCase();
+    if (!trimmed || selected.includes(trimmed)) return;
+    setSelected((prev) => [...prev, trimmed]);
+    setExtra("");
+  }
+
+  const allTags = Array.from(new Set([...suggestions, ...selected]));
+
+  return (
+    <View>
+      <View style={styles.handleBar} />
+      <View style={styles.row}>
+        <Pressable onPress={onBack}>
+          <Text style={styles.backLabel}>Back</Text>
+        </Pressable>
+        <Text style={styles.sheetTitle}>Add tags</Text>
+        <Text style={{ width: 48 }} />
+      </View>
+      <View style={styles.tagRow}>
+        {allTags.map((tag) => (
+          <Pressable
+            key={tag}
+            style={[styles.tagChip, selected.includes(tag) && styles.tagChipSelected]}
+            onPress={() => toggle(tag)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: selected.includes(tag) }}
+          >
+            <Text style={[styles.tagLabel, selected.includes(tag) && styles.tagLabelSelected]}>
+              {tag}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <View style={styles.tagInputRow}>
+        <TextInput
+          style={styles.tagInput}
+          value={extra}
+          onChangeText={setExtra}
+          placeholder="Add a tag…"
+          onSubmitEditing={addExtra}
+          returnKeyType="done"
+        />
+        <Pressable style={styles.tagAddBtn} onPress={addExtra}>
+          <Text style={styles.tagAddLabel}>Add</Text>
+        </Pressable>
+      </View>
+      <Pressable style={styles.btn} onPress={() => onConfirm(selected)}>
+        <Text style={styles.btnLabel}>Confirm{selected.length > 0 ? ` (${selected.length})` : ""}</Text>
+      </Pressable>
+      <Pressable style={[styles.btn, styles.cancelBtn, { marginTop: 8 }]} onPress={() => onConfirm([])}>
+        <Text style={styles.cancelLabel}>Skip tags</Text>
       </Pressable>
     </View>
   );
@@ -303,4 +409,33 @@ const styles = StyleSheet.create({
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: "#e5e5e5", marginVertical: 10 },
   cardBack: { fontSize: 15, color: "#444" },
   summary: { fontSize: 13, color: "#888", marginBottom: 16, fontStyle: "italic" },
+  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
+  tagChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "#ddd",
+    backgroundColor: "#f5f5f5",
+  },
+  tagChipSelected: { backgroundColor: "#000", borderColor: "#000" },
+  tagLabel: { fontSize: 15, color: "#555" },
+  tagLabelSelected: { color: "#fff", fontWeight: "600" },
+  tagInputRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
+  tagInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 15,
+  },
+  tagAddBtn: {
+    backgroundColor: "#f0f0f0",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+  },
+  tagAddLabel: { fontSize: 15, color: "#333" },
 });

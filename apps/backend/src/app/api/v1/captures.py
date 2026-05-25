@@ -2,13 +2,14 @@ from typing import Annotated, Literal
 
 import anthropic
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.auth import UserClaims, get_current_user
 from app.core.llm import get_anthropic_client
 from app.skills.generate_flashcard import FlashcardPair, GenerateFlashcardInput
 from app.skills.infer_format import InferFormatInput
 from app.skills.registry import SkillRegistry
+from app.skills.suggest_tags import SuggestTagsInput, SuggestTagsSkill
 
 router = APIRouter()
 
@@ -39,6 +40,26 @@ class TransformResponse(BaseModel):
     skill_name: str
     cards: list[FlashcardPair]
     source_summary: str
+
+
+class SuggestTagsRequest(BaseModel):
+    text: str = Field(min_length=1)
+    existing_tags: list[str] = Field(default_factory=list)
+
+
+class SuggestTagsResponse(BaseModel):
+    suggestions: list[str]
+
+
+@router.post("/suggest-tags", response_model=SuggestTagsResponse)
+async def suggest_tags(
+    payload: SuggestTagsRequest,
+    _user: CurrentUser,
+    client: AnthropicDep,
+) -> SuggestTagsResponse:
+    skill = SuggestTagsSkill(client, model="claude-haiku-4-5-20251001")
+    out = await skill.run(SuggestTagsInput(text=payload.text, existing_tags=payload.existing_tags))
+    return SuggestTagsResponse(suggestions=out.suggestions)
 
 
 @router.post("/transform", response_model=TransformResponse)
