@@ -121,6 +121,41 @@ export const HTTPValidationErrorSchema = {
     title: 'HTTPValidationError'
 } as const;
 
+export const SuggestTagsRequestSchema = {
+    properties: {
+        text: {
+            type: 'string',
+            minLength: 1,
+            title: 'Text'
+        },
+        existing_tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Existing Tags'
+        }
+    },
+    type: 'object',
+    required: ['text'],
+    title: 'SuggestTagsRequest'
+} as const;
+
+export const SuggestTagsResponseSchema = {
+    properties: {
+        suggestions: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Suggestions'
+        }
+    },
+    type: 'object',
+    required: ['suggestions'],
+    title: 'SuggestTagsResponse'
+} as const;
+
 export const TagOutSchema = {
     properties: {
         id: {

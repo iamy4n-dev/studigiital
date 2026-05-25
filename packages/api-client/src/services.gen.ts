@@ -3,7 +3,26 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { TransformCaptureApiV1CapturesTransformPostData, TransformCaptureApiV1CapturesTransformPostResponse, ListCapturesApiV1CapturesGetResponse, CreateCaptureApiV1CapturesPostData, CreateCaptureApiV1CapturesPostResponse, GetCaptureApiV1CapturesCaptureIdGetData, GetCaptureApiV1CapturesCaptureIdGetResponse, GetArtifactApiV1ArtifactsArtifactIdGetData, GetArtifactApiV1ArtifactsArtifactIdGetResponse, ListArtifactsApiV1ArtifactsGetResponse, ListTagsApiV1TagsGetResponse, GetTagApiV1TagsTagIdGetData, GetTagApiV1TagsTagIdGetResponse, GetMeApiV1UsersMeGetResponse, GetProfileApiV1UsersProfileGetResponse, CreateProfileApiV1UsersProfilePostData, CreateProfileApiV1UsersProfilePostResponse, HealthHealthGetResponse } from './types.gen';
+import type { SuggestTagsApiV1CapturesSuggestTagsPostData, SuggestTagsApiV1CapturesSuggestTagsPostResponse, TransformCaptureApiV1CapturesTransformPostData, TransformCaptureApiV1CapturesTransformPostResponse, ListCapturesApiV1CapturesGetResponse, CreateCaptureApiV1CapturesPostData, CreateCaptureApiV1CapturesPostResponse, GetCaptureApiV1CapturesCaptureIdGetData, GetCaptureApiV1CapturesCaptureIdGetResponse, GetArtifactApiV1ArtifactsArtifactIdGetData, GetArtifactApiV1ArtifactsArtifactIdGetResponse, ListArtifactsApiV1ArtifactsGetResponse, ListTagsApiV1TagsGetResponse, GetTagApiV1TagsTagIdGetData, GetTagApiV1TagsTagIdGetResponse, GetMeApiV1UsersMeGetResponse, GetProfileApiV1UsersProfileGetResponse, CreateProfileApiV1UsersProfilePostData, CreateProfileApiV1UsersProfilePostResponse, HealthHealthGetResponse } from './types.gen';
+
+/**
+ * Suggest Tags
+ * @param data The data for the request.
+ * @param data.requestBody
+ * @returns SuggestTagsResponse Successful Response
+ * @throws ApiError
+ */
+export const suggestTagsApiV1CapturesSuggestTagsPost = (data: SuggestTagsApiV1CapturesSuggestTagsPostData): CancelablePromise<SuggestTagsApiV1CapturesSuggestTagsPostResponse> => {
+    return __request(OpenAPI, {
+        method: 'POST',
+        url: '/api/v1/captures/suggest-tags',
+        body: data.requestBody,
+        mediaType: 'application/json',
+        errors: {
+            422: 'Validation Error'
+        }
+    });
+};
 
 /**
  * Transform Capture
