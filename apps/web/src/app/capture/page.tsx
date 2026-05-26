@@ -11,9 +11,24 @@ type Phase =
   | { status: "error"; message: string };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 export default function CapturePage() {
+  return DEV_MODE ? <CaptureShell getToken={async () => null} showUser={false} /> : <AuthCapturePage />;
+}
+
+function AuthCapturePage() {
   const { getToken } = useAuth();
+  return <CaptureShell getToken={getToken} showUser />;
+}
+
+function CaptureShell({
+  getToken,
+  showUser,
+}: {
+  getToken: () => Promise<string | null>;
+  showUser: boolean;
+}) {
   const [text, setText] = useState("");
   const [phase, setPhase] = useState<Phase>({ status: "idle" });
 
@@ -59,7 +74,7 @@ export default function CapturePage() {
     <div style={styles.shell}>
       <header style={styles.header}>
         <span style={styles.logo}>Studigital</span>
-        <UserButton />
+        {showUser && <UserButton />}
       </header>
 
       <main style={styles.main}>
@@ -109,7 +124,7 @@ function ResultView({ data, onReset }: { data: TransformResponse; onReset: () =>
       </p>
       <div style={styles.cardStack}>
         {data.cards.map((card, i) => (
-          <Flashcard key={i} card={card} index={i} />
+          <Flashcard key={i} card={card} />
         ))}
       </div>
       {data.source_summary && (
@@ -122,7 +137,7 @@ function ResultView({ data, onReset }: { data: TransformResponse; onReset: () =>
   );
 }
 
-function Flashcard({ card, index }: { card: FlashcardPair; index: number }) {
+function Flashcard({ card }: { card: FlashcardPair }) {
   const [flipped, setFlipped] = useState(false);
   return (
     <div

@@ -9,7 +9,16 @@ export const metadata: Metadata = {
   description: "Capture, transform, and review your learning moments",
 };
 
+const devMode = process.env.NEXT_PUBLIC_DEV_MODE === "true";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  if (devMode) {
+    return (
+      <html lang="en">
+        <body>{children}</body>
+      </html>
+    );
+  }
   return (
     <ClerkProvider>
       <html lang="en">

@@ -1,7 +1,13 @@
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 
+const devMode = process.env.NEXT_PUBLIC_DEV_MODE === "true";
+
 export default function HomePage() {
+  if (devMode) {
+    redirect("/capture");
+  }
+
   return (
     <>
       <SignedIn>
