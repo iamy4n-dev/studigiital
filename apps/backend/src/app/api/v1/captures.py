@@ -1,11 +1,11 @@
 from typing import Annotated, Literal
 
-import anthropic
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from app.core.auth import UserClaims, get_current_user
-from app.core.llm import get_anthropic_client
+from app.core.config import settings
+from app.core.llm import LLMBackend, get_llm_backend
 from app.skills.generate_flashcard import FlashcardPair, GenerateFlashcardInput
 from app.skills.infer_format import InferFormatInput
 from app.skills.registry import SkillRegistry
@@ -13,7 +13,7 @@ from app.skills.suggest_tags import SuggestTagsInput, SuggestTagsSkill
 
 router = APIRouter()
 
-AnthropicDep = Annotated[anthropic.AsyncAnthropic, Depends(get_anthropic_client)]
+LLMBackendDep = Annotated[LLMBackend, Depends(get_llm_backend)]
 CurrentUser = Annotated[UserClaims, Depends(get_current_user)]
 
 
@@ -55,9 +55,9 @@ class SuggestTagsResponse(BaseModel):
 async def suggest_tags(
     payload: SuggestTagsRequest,
     _user: CurrentUser,
-    client: AnthropicDep,
+    backend: LLMBackendDep,
 ) -> SuggestTagsResponse:
-    skill = SuggestTagsSkill(client, model="claude-haiku-4-5-20251001")
+    skill = SuggestTagsSkill(backend, settings.llm_model_infer)
     out = await skill.run(SuggestTagsInput(text=payload.text, existing_tags=payload.existing_tags))
     return SuggestTagsResponse(suggestions=out.suggestions)
 
@@ -66,9 +66,9 @@ async def suggest_tags(
 async def transform_capture(
     payload: TransformRequest,
     _user: CurrentUser,
-    client: AnthropicDep,
+    backend: LLMBackendDep,
 ) -> TransformResponse:
-    registry = SkillRegistry(client)
+    registry = SkillRegistry(backend)
     infer_out = await registry.get_infer_skill().run(InferFormatInput(text=payload.text))
     generate_out = await registry.get_generate_skill(infer_out.skill_name, payload.tier).run(
         GenerateFlashcardInput(text=payload.text)

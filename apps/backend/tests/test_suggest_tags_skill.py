@@ -1,28 +1,16 @@
 from unittest.mock import AsyncMock, MagicMock
 
-import anthropic
 import pytest
 
+from app.core.llm import LLMBackend
 from app.skills.suggest_tags import SuggestTagsInput, SuggestTagsSkill
-
-
-def _tool_response(data: object) -> MagicMock:
-    block = MagicMock()
-    block.type = "tool_use"
-    block.input = data
-    response = MagicMock()
-    response.content = [block]
-    return response
 
 
 @pytest.fixture
 def skill() -> SuggestTagsSkill:
-    client = MagicMock(spec=anthropic.AsyncAnthropic)
-    client.messages = MagicMock()
-    client.messages.create = AsyncMock(
-        return_value=_tool_response({"suggestions": ["biology", "photosynthesis"]})
-    )
-    return SuggestTagsSkill(client, model="claude-haiku-4-5-20251001")
+    backend = MagicMock(spec=LLMBackend)
+    backend.call_structured = AsyncMock(return_value={"suggestions": ["biology", "photosynthesis"]})
+    return SuggestTagsSkill(backend, model="any-model")
 
 
 async def test_skill_returns_suggestions_for_capture_text(skill: SuggestTagsSkill) -> None:
@@ -33,14 +21,12 @@ async def test_skill_returns_suggestions_for_capture_text(skill: SuggestTagsSkil
 
 async def test_skill_sends_capture_text_to_llm(skill: SuggestTagsSkill) -> None:
     await skill.run(SuggestTagsInput(text="Mitochondria is the powerhouse of the cell."))
-    call_kwargs = skill._client.messages.create.call_args.kwargs
-    prompt_content = call_kwargs["messages"][0]["content"]
-    assert "Mitochondria" in prompt_content
+    prompt_arg: str = skill._backend.call_structured.call_args.args[0]  # type: ignore[attr-defined]
+    assert "Mitochondria" in prompt_arg
 
 
 async def test_skill_includes_existing_tags_in_prompt(skill: SuggestTagsSkill) -> None:
     await skill.run(SuggestTagsInput(text="some text", existing_tags=["math", "biology"]))
-    call_kwargs = skill._client.messages.create.call_args.kwargs
-    prompt_content = call_kwargs["messages"][0]["content"]
-    assert "math" in prompt_content
-    assert "biology" in prompt_content
+    prompt_arg: str = skill._backend.call_structured.call_args.args[0]  # type: ignore[attr-defined]
+    assert "math" in prompt_arg
+    assert "biology" in prompt_arg
