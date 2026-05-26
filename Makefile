@@ -58,6 +58,14 @@ backend-typecheck: ## Mypy type check
 backend-test: ## Run backend tests
 	cd apps/backend && uv run pytest tests/ -v
 
+# ── Database ─────────────────────────────────────────────────────────────────
+
+db-migrate: ## Apply all pending Alembic migrations (requires DATABASE_URL in apps/backend/.env)
+	cd apps/backend && uv run alembic upgrade head
+
+db-revision: ## Autogenerate a new migration (usage: make db-revision MSG="description")
+	cd apps/backend && uv run alembic revision --autogenerate -m "$(MSG)"
+
 # ── Maintenance ───────────────────────────────────────────────────────────────
 
 clean: ## Remove build caches and Expo/Next.js output (keeps node_modules and .venv)

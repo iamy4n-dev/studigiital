@@ -1,11 +1,18 @@
+from __future__ import annotations
+
+import uuid
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import UserClaims, get_current_user
 from app.core.config import settings
+from app.core.db import get_session
 from app.core.llm import LLMBackend, get_llm_backend
+from app.models.artifact import Artifact
+from app.models.capture import Capture
 from app.skills.generate_flashcard import (
     FlashcardPair,
     GenerateFlashcardInput,
@@ -21,6 +28,7 @@ router = APIRouter()
 
 LLMBackendDep = Annotated[LLMBackend, Depends(get_llm_backend)]
 CurrentUser = Annotated[UserClaims, Depends(get_current_user)]
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
 class CaptureCreate(BaseModel):
@@ -90,8 +98,9 @@ async def suggest_tags(
 @router.post("/transform", response_model=TransformResponse)
 async def transform_capture(
     payload: TransformRequest,
-    _user: CurrentUser,
+    user: CurrentUser,
     backend: LLMBackendDep,
+    session: SessionDep,
 ) -> FlashcardTransformResponse | NoteTransformResponse | QuizTransformResponse:
     registry = SkillRegistry(backend)
     if payload.skill_name:
@@ -100,34 +109,51 @@ async def transform_capture(
         infer_out = await registry.get_infer_skill().run(InferFormatInput(text=payload.text))
         skill_name = infer_out.skill_name
 
+    result: FlashcardTransformResponse | NoteTransformResponse | QuizTransformResponse
     if skill_name == "generate_flashcard":
         fc_skill = registry.get_generate_skill("generate_flashcard", payload.tier)
         assert isinstance(fc_skill, GenerateFlashcardSkill)
         fc_out = await fc_skill.run(GenerateFlashcardInput(text=payload.text))
-        return FlashcardTransformResponse(
+        result = FlashcardTransformResponse(
             skill_name="generate_flashcard",
             cards=fc_out.cards,
             source_summary=fc_out.source_summary,
         )
-
-    if skill_name == "generate_note":
+    elif skill_name == "generate_note":
         note_skill = registry.get_generate_skill("generate_note", payload.tier)
         assert isinstance(note_skill, GenerateNoteSkill)
         note_out = await note_skill.run(GenerateNoteInput(text=payload.text))
-        return NoteTransformResponse(
+        result = NoteTransformResponse(
             skill_name="generate_note",
             title=note_out.title,
             body_markdown=note_out.body_markdown,
             key_points=note_out.key_points,
         )
-
-    if skill_name == "generate_quiz":
+    elif skill_name == "generate_quiz":
         quiz_skill = registry.get_generate_skill("generate_quiz", payload.tier)
         assert isinstance(quiz_skill, GenerateQuizSkill)
         quiz_out = await quiz_skill.run(GenerateQuizInput(text=payload.text))
-        return QuizTransformResponse(skill_name="generate_quiz", questions=quiz_out.questions)
+        result = QuizTransformResponse(skill_name="generate_quiz", questions=quiz_out.questions)
+    else:
+        raise ValueError(f"Unsupported skill: {skill_name!r}")
 
-    raise ValueError(f"Unsupported skill: {skill_name!r}")
+    capture = Capture(
+        id=str(uuid.uuid4()),
+        user_id=user.user_id,
+        mode="quick_text",
+        raw_content=payload.text,
+        status="transformed",
+    )
+    session.add(capture)
+    artifact = Artifact(
+        capture_id=capture.id,
+        artifact_type=skill_name,
+        content=result.model_dump(),
+    )
+    session.add(artifact)
+    await session.commit()
+
+    return result
 
 
 @router.post("/", response_model=CaptureOut, status_code=201)
