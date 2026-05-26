@@ -24,7 +24,8 @@ class QuizQuestion(BaseModel):
     def correct_index_in_bounds(self) -> QuizQuestion:
         if not (0 <= self.correct_index < len(self.options)):
             raise ValueError(
-                f"correct_index {self.correct_index} is out of bounds for {len(self.options)} options"
+                f"correct_index {self.correct_index} is out of bounds "
+                f"for {len(self.options)} options"
             )
         return self
 

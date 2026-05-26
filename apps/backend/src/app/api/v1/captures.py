@@ -6,7 +6,11 @@ from pydantic import BaseModel, Field
 from app.core.auth import UserClaims, get_current_user
 from app.core.config import settings
 from app.core.llm import LLMBackend, get_llm_backend
-from app.skills.generate_flashcard import FlashcardPair, GenerateFlashcardInput, GenerateFlashcardSkill
+from app.skills.generate_flashcard import (
+    FlashcardPair,
+    GenerateFlashcardInput,
+    GenerateFlashcardSkill,
+)
 from app.skills.generate_note import GenerateNoteInput, GenerateNoteSkill
 from app.skills.generate_quiz import GenerateQuizInput, GenerateQuizSkill, QuizQuestion
 from app.skills.infer_format import InferFormatInput
@@ -97,31 +101,31 @@ async def transform_capture(
         skill_name = infer_out.skill_name
 
     if skill_name == "generate_flashcard":
-        skill = registry.get_generate_skill("generate_flashcard", payload.tier)
-        assert isinstance(skill, GenerateFlashcardSkill)
-        out = await skill.run(GenerateFlashcardInput(text=payload.text))
+        fc_skill = registry.get_generate_skill("generate_flashcard", payload.tier)
+        assert isinstance(fc_skill, GenerateFlashcardSkill)
+        fc_out = await fc_skill.run(GenerateFlashcardInput(text=payload.text))
         return FlashcardTransformResponse(
             skill_name="generate_flashcard",
-            cards=out.cards,
-            source_summary=out.source_summary,
+            cards=fc_out.cards,
+            source_summary=fc_out.source_summary,
         )
 
     if skill_name == "generate_note":
-        skill = registry.get_generate_skill("generate_note", payload.tier)
-        assert isinstance(skill, GenerateNoteSkill)
-        out = await skill.run(GenerateNoteInput(text=payload.text))
+        note_skill = registry.get_generate_skill("generate_note", payload.tier)
+        assert isinstance(note_skill, GenerateNoteSkill)
+        note_out = await note_skill.run(GenerateNoteInput(text=payload.text))
         return NoteTransformResponse(
             skill_name="generate_note",
-            title=out.title,
-            body_markdown=out.body_markdown,
-            key_points=out.key_points,
+            title=note_out.title,
+            body_markdown=note_out.body_markdown,
+            key_points=note_out.key_points,
         )
 
     if skill_name == "generate_quiz":
-        skill = registry.get_generate_skill("generate_quiz", payload.tier)
-        assert isinstance(skill, GenerateQuizSkill)
-        out = await skill.run(GenerateQuizInput(text=payload.text))
-        return QuizTransformResponse(skill_name="generate_quiz", questions=out.questions)
+        quiz_skill = registry.get_generate_skill("generate_quiz", payload.tier)
+        assert isinstance(quiz_skill, GenerateQuizSkill)
+        quiz_out = await quiz_skill.run(GenerateQuizInput(text=payload.text))
+        return QuizTransformResponse(skill_name="generate_quiz", questions=quiz_out.questions)
 
     raise ValueError(f"Unsupported skill: {skill_name!r}")
 

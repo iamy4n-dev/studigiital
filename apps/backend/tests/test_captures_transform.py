@@ -1,4 +1,3 @@
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -86,7 +85,10 @@ async def test_transform_paid_tier_uses_paid_model(mock_backend: LLMBackend) -> 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             await client.post(
                 "/api/v1/captures/transform",
-                json={"text": "Photosynthesis is the process plants use to make food.", "tier": "paid"},
+                json={
+                    "text": "Photosynthesis is the process plants use to make food.",
+                    "tier": "paid",
+                },
             )
 
     # second call_structured is the generate skill — its model arg should be the paid model
@@ -115,7 +117,7 @@ async def test_transform_when_backend_raises_returns_500() -> None:
 @pytest.mark.asyncio
 async def test_transform_when_backend_times_out_returns_500() -> None:
     timeout_backend = MagicMock(spec=LLMBackend)
-    timeout_backend.call_structured = AsyncMock(side_effect=asyncio.TimeoutError())
+    timeout_backend.call_structured = AsyncMock(side_effect=TimeoutError())
     app.dependency_overrides[get_llm_backend] = lambda: timeout_backend
 
     async with AsyncClient(
@@ -161,7 +163,7 @@ async def test_transform_returns_note_schema_when_inferred() -> None:
         {"skill_name": "generate_note", "confidence": 0.9},
         {
             "title": "How the Water Cycle Works",
-            "body_markdown": "Water evaporates from oceans, condenses into clouds, and falls as rain...",
+            "body_markdown": "Water evaporates, condenses into clouds, and falls as rain.",
             "key_points": ["Evaporation", "Condensation", "Precipitation"],
         },
     )
