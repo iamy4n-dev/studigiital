@@ -3,6 +3,7 @@
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { useState } from "react";
 import type { FlashcardPair, QuizQuestion, TransformResult } from "@/lib/transform";
+import { MarkdownContent } from "@/lib/MarkdownContent";
 
 type Phase =
   | { status: "idle" }
@@ -141,7 +142,7 @@ function ResultView({ data, onReset }: { data: TransformResult; onReset: () => v
         <>
           <p style={styles.resultMeta}>Note created</p>
           <h2 style={styles.noteTitle}>{data.title}</h2>
-          <p style={styles.noteBody}>{data.body_markdown}</p>
+          <MarkdownContent>{data.body_markdown}</MarkdownContent>
           {data.key_points.length > 0 && (
             <ul style={styles.keyPoints}>
               {data.key_points.map((pt, i) => (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { TransformResult, SuggestTagsResult, QuizQuestion, FlashcardPair } from "@/lib/transform";
+import { MarkdownContent } from "@/lib/MarkdownContent";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -187,7 +188,7 @@ function SkillResult({ data }: { data: Result }) {
       <div style={s.stack}>
         <p style={s.meta}>Note</p>
         <h2 style={s.noteTitle}>{data.title}</h2>
-        <p style={s.noteBody}>{data.body_markdown}</p>
+        <MarkdownContent>{data.body_markdown}</MarkdownContent>
         <ul style={s.keyPoints}>
           {data.key_points.map((pt, i) => (
             <li key={i}>{pt}</li>
