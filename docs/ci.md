@@ -8,17 +8,17 @@ Three jobs run in parallel. All three must pass before merging.
 
 ## Job: Build & Lint
 
-**What it checks:** JS dependency install, Turborepo build (includes Next.js web build), TypeScript typecheck (web + mobile), Jest tests (mobile).
+**What it checks:** JS dependency install, Turborepo build (includes Next.js web build), TypeScript typecheck (web).
 
 Web steps run with `NEXT_PUBLIC_DEV_MODE=true` so no Clerk keys are required in CI.
+
+Mobile CI is intentionally excluded until after the first web release.
 
 | Step | Failure means | Fix locally |
 |------|--------------|-------------|
 | Install JS dependencies | `pnpm-lock.yaml` is out of sync | `pnpm install` then commit the updated lockfile |
 | Build (turbo) | A package fails to compile | `make build` |
 | Typecheck web | TypeScript errors in `apps/web` | `pnpm --filter @studigiital/web typecheck` |
-| Typecheck mobile | TypeScript errors in `apps/mobile` | `pnpm --filter @studigiital/mobile typecheck` |
-| Test mobile | A Jest test is failing | `pnpm --filter @studigiital/mobile test` |
 
 ---
 

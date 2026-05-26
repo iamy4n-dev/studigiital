@@ -35,9 +35,8 @@ web-dev: ## Start Next.js dev server on :3000
 build: ## Build all packages (turbo)
 	pnpm turbo build
 
-typecheck: ## TypeScript typecheck (web + mobile)
+typecheck: ## TypeScript typecheck (web)
 	NEXT_PUBLIC_DEV_MODE=true NEXT_PUBLIC_API_URL=http://localhost:8000 pnpm --filter @studigiital/web typecheck
-	pnpm --filter @studigiital/mobile typecheck
 
 generate: ## Regenerate TypeScript client from committed openapi.json
 	pnpm run generate:api-client
