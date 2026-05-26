@@ -2,12 +2,12 @@
 
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { useState } from "react";
-import type { TransformResponse, FlashcardPair } from "@studigiital/api-client";
+import type { FlashcardPair, QuizQuestion, TransformResult } from "@/lib/transform";
 
 type Phase =
   | { status: "idle" }
   | { status: "submitting" }
-  | { status: "result"; data: TransformResponse }
+  | { status: "result"; data: TransformResult }
   | { status: "error"; message: string };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -55,7 +55,7 @@ function CaptureShell({
         return;
       }
 
-      const data: TransformResponse = await res.json();
+      const data: TransformResult = await res.json();
       setPhase({ status: "result", data });
     } catch (err) {
       setPhase({
@@ -74,7 +74,14 @@ function CaptureShell({
     <div style={styles.shell}>
       <header style={styles.header}>
         <span style={styles.logo}>Studigital</span>
-        {showUser && <UserButton />}
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          {DEV_MODE && (
+            <a href="/skill-test" style={styles.devLink}>
+              Skill Tester
+            </a>
+          )}
+          {showUser && <UserButton />}
+        </div>
       </header>
 
       <main style={styles.main}>
@@ -114,21 +121,45 @@ function CaptureShell({
   );
 }
 
-function ResultView({ data, onReset }: { data: TransformResponse; onReset: () => void }) {
+function ResultView({ data, onReset }: { data: TransformResult; onReset: () => void }) {
   return (
     <div style={styles.resultContainer}>
-      <p style={styles.resultMeta}>
-        {data.skill_name === "generate_flashcard"
-          ? `${data.cards.length} flashcard${data.cards.length !== 1 ? "s" : ""} created`
-          : data.skill_name.replace(/_/g, " ")}
-      </p>
-      <div style={styles.cardStack}>
-        {data.cards.map((card, i) => (
-          <Flashcard key={i} card={card} />
-        ))}
-      </div>
-      {data.source_summary && (
-        <p style={styles.summary}>{data.source_summary}</p>
+      {data.skill_name === "generate_flashcard" && (
+        <>
+          <p style={styles.resultMeta}>
+            {data.cards.length} flashcard{data.cards.length !== 1 ? "s" : ""} created
+          </p>
+          <div style={styles.cardStack}>
+            {data.cards.map((card, i) => (
+              <Flashcard key={i} card={card} />
+            ))}
+          </div>
+          {data.source_summary && <p style={styles.summary}>{data.source_summary}</p>}
+        </>
+      )}
+      {data.skill_name === "generate_note" && (
+        <>
+          <p style={styles.resultMeta}>Note created</p>
+          <h2 style={styles.noteTitle}>{data.title}</h2>
+          <p style={styles.noteBody}>{data.body_markdown}</p>
+          {data.key_points.length > 0 && (
+            <ul style={styles.keyPoints}>
+              {data.key_points.map((pt, i) => (
+                <li key={i}>{pt}</li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+      {data.skill_name === "generate_quiz" && (
+        <>
+          <p style={styles.resultMeta}>
+            {data.questions.length} question{data.questions.length !== 1 ? "s" : ""} generated
+          </p>
+          {data.questions.map((q, qi) => (
+            <QuizCard key={qi} question={q} />
+          ))}
+        </>
       )}
       <button style={styles.button} onClick={onReset}>
         Capture another →
@@ -151,6 +182,42 @@ function Flashcard({ card }: { card: FlashcardPair }) {
         <p style={styles.flashcardText}>{flipped ? card.back : card.front}</p>
       </div>
       <span style={styles.flipHint}>tap to flip</span>
+    </div>
+  );
+}
+
+function QuizCard({ question }: { question: QuizQuestion }) {
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <div style={styles.flashcard}>
+      <p style={styles.flashcardText}>{question.stem}</p>
+      <ol style={{ paddingLeft: "1.25rem", margin: "0.5rem 0" }}>
+        {question.options.map((opt, i) => (
+          <li
+            key={i}
+            style={{
+              color: revealed
+                ? i === question.correct_index
+                  ? "#15803d"
+                  : "#888"
+                : "inherit",
+              fontWeight: revealed && i === question.correct_index ? 700 : "normal",
+            }}
+          >
+            {opt}
+          </li>
+        ))}
+      </ol>
+      {revealed ? (
+        <p style={styles.summary}>{question.explanation}</p>
+      ) : (
+        <button
+          style={{ ...styles.button, fontSize: "0.875rem", padding: "0.5rem 1rem" }}
+          onClick={() => setRevealed(true)}
+        >
+          Reveal answer
+        </button>
+      )}
     </div>
   );
 }
@@ -277,11 +344,41 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#bbb",
     alignSelf: "flex-end",
   },
+  devLink: {
+    fontSize: "0.8125rem",
+    fontWeight: 600,
+    color: "#888",
+    textDecoration: "none",
+    border: "1px solid #ddd",
+    borderRadius: 6,
+    padding: "0.2rem 0.6rem",
+  },
   summary: {
     fontSize: "0.875rem",
     color: "#666",
     fontStyle: "italic",
     borderLeft: "3px solid #eee",
     paddingLeft: "0.75rem",
+  },
+  noteTitle: {
+    fontSize: "1.25rem",
+    fontWeight: 700,
+    letterSpacing: "-0.01em",
+    margin: 0,
+  },
+  noteBody: {
+    fontSize: "1rem",
+    lineHeight: 1.7,
+    color: "#333",
+    margin: 0,
+    whiteSpace: "pre-wrap" as const,
+  },
+  keyPoints: {
+    margin: 0,
+    paddingLeft: "1.25rem",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "0.25rem",
+    fontSize: "0.9375rem",
   },
 };

@@ -5,6 +5,8 @@ import pytest
 
 from app.core.llm import LLMBackend
 from app.skills.generate_flashcard import GenerateFlashcardSkill
+from app.skills.generate_note import GenerateNoteSkill
+from app.skills.generate_quiz import GenerateQuizSkill
 from app.skills.registry import SkillRegistry
 
 
@@ -36,6 +38,16 @@ def test_free_and_paid_tiers_use_different_models(registry: SkillRegistry) -> No
     assert paid_skill.model == "large-model"
 
 
+def test_generate_note_skill_is_routed(registry: SkillRegistry) -> None:
+    skill = registry.get_generate_skill("generate_note", "free")
+    assert isinstance(skill, GenerateNoteSkill)
+
+
+def test_generate_quiz_skill_is_routed(registry: SkillRegistry) -> None:
+    skill = registry.get_generate_skill("generate_quiz", "free")
+    assert isinstance(skill, GenerateQuizSkill)
+
+
 def test_unknown_skill_raises(registry: SkillRegistry) -> None:
     with pytest.raises(ValueError, match="Unknown or unsupported skill"):
-        registry.get_generate_skill("generate_note", "free")
+        registry.get_generate_skill("generate_image", "free")
