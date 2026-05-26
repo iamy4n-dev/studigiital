@@ -32,7 +32,7 @@ class CaptureOut(BaseModel):
 
 
 class TransformRequest(BaseModel):
-    text: str
+    text: str = Field(min_length=1)
     tier: Literal["free", "paid"] = "free"
 
 

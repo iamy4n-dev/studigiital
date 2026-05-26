@@ -1,9 +1,11 @@
-from unittest.mock import AsyncMock, MagicMock
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.auth import UserClaims, get_current_user
+from app.core.config import settings
 from app.core.llm import LLMBackend, get_llm_backend
 from app.main import app
 
@@ -64,3 +66,65 @@ async def test_transform_calls_infer_then_generate(mock_backend: LLMBackend) -> 
         await client.post("/api/v1/captures/transform", json={"text": "Some text"})
 
     assert mock_backend.call_structured.call_count == 2  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_transform_empty_text_returns_422() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/captures/transform", json={"text": ""})
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_transform_paid_tier_uses_paid_model(mock_backend: LLMBackend) -> None:
+    with patch("app.skills.registry.settings") as mock_settings:
+        mock_settings.llm_model_infer = settings.llm_model_infer
+        mock_settings.llm_model_free = "small-model"
+        mock_settings.llm_model_paid = "large-model"
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            await client.post(
+                "/api/v1/captures/transform",
+                json={"text": "Photosynthesis is the process plants use to make food.", "tier": "paid"},
+            )
+
+    # second call_structured is the generate skill — its model arg should be the paid model
+    generate_model_arg: str = mock_backend.call_structured.call_args_list[1].args[2]  # type: ignore[attr-defined]
+    assert generate_model_arg == "large-model"
+
+
+@pytest.mark.asyncio
+async def test_transform_when_backend_raises_returns_500() -> None:
+    broken_backend = MagicMock(spec=LLMBackend)
+    broken_backend.call_structured = AsyncMock(side_effect=RuntimeError("LLM unavailable"))
+    app.dependency_overrides[get_llm_backend] = lambda: broken_backend
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app, raise_app_exceptions=False),
+        base_url="http://test",
+    ) as client:
+        response = await client.post(
+            "/api/v1/captures/transform",
+            json={"text": "Mitochondria is the powerhouse of the cell."},
+        )
+
+    assert response.status_code == 500
+
+
+@pytest.mark.asyncio
+async def test_transform_when_backend_times_out_returns_500() -> None:
+    timeout_backend = MagicMock(spec=LLMBackend)
+    timeout_backend.call_structured = AsyncMock(side_effect=asyncio.TimeoutError())
+    app.dependency_overrides[get_llm_backend] = lambda: timeout_backend
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app, raise_app_exceptions=False),
+        base_url="http://test",
+    ) as client:
+        response = await client.post(
+            "/api/v1/captures/transform",
+            json={"text": "The speed of light is approximately 3×10⁸ m/s."},
+        )
+
+    assert response.status_code == 500
