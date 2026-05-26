@@ -75,7 +75,7 @@ class OpenAICompatBackend(LLMBackend):
                     },
                 }
             ],
-            tool_choice={"type": "function", "function": {"name": "output"}},
+            tool_choice="required",  # Ollama/LM Studio only support string values
         )
         args = response.choices[0].message.tool_calls[0].function.arguments  # type: ignore[index]
         return json.loads(args)  # type: ignore[no-any-return]
