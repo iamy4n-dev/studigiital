@@ -25,7 +25,8 @@ def skill() -> GenerateQuizSkill:
 
 
 async def test_skill_returns_questions_from_scenario_text(skill: GenerateQuizSkill) -> None:
-    out = await skill.run(GenerateQuizInput(text="Mitochondria produce ATP through cellular respiration."))
+    inp = GenerateQuizInput(text="Mitochondria produce ATP through cellular respiration.")
+    out = await skill.run(inp)
     assert len(out.questions) >= 1
     q = out.questions[0]
     assert q.stem
@@ -34,7 +35,8 @@ async def test_skill_returns_questions_from_scenario_text(skill: GenerateQuizSki
 
 
 async def test_skill_sends_capture_text_to_llm(skill: GenerateQuizSkill) -> None:
-    await skill.run(GenerateQuizInput(text="Mitochondria produce ATP through cellular respiration."))
+    inp = GenerateQuizInput(text="Mitochondria produce ATP through cellular respiration.")
+    await skill.run(inp)
     prompt_arg: str = skill._backend.call_structured.call_args.args[0]  # type: ignore[attr-defined]
     assert "Mitochondria" in prompt_arg
 
@@ -60,7 +62,8 @@ async def test_correct_index_must_be_within_options_bounds() -> None:
 
 async def test_skill_sends_flat_schema_to_llm(skill: GenerateQuizSkill) -> None:
     """Schema must have no $ref — local models don't expand JSON Schema references."""
-    await skill.run(GenerateQuizInput(text="Mitochondria produce ATP through cellular respiration."))
+    inp = GenerateQuizInput(text="Mitochondria produce ATP through cellular respiration.")
+    await skill.run(inp)
     schema_arg: dict = skill._backend.call_structured.call_args.args[1]  # type: ignore[attr-defined]
     assert "$ref" not in str(schema_arg)
     assert "$defs" not in schema_arg

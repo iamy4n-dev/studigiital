@@ -21,7 +21,8 @@ def skill() -> GenerateFlashcardSkill:
 
 
 async def test_skill_returns_cards_from_factual_text(skill: GenerateFlashcardSkill) -> None:
-    out = await skill.run(GenerateFlashcardInput(text="Mitochondria is the powerhouse of the cell."))
+    inp = GenerateFlashcardInput(text="Mitochondria is the powerhouse of the cell.")
+    out = await skill.run(inp)
     assert len(out.cards) >= 1
     assert out.source_summary
 

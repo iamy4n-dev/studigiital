@@ -8,14 +8,17 @@ Three jobs run in parallel. All three must pass before merging.
 
 ## Job: Build & Lint
 
-**What it checks:** JS dependency install, Turborepo build, TypeScript typecheck (mobile), Jest tests (mobile).
+**What it checks:** JS dependency install, Turborepo build (includes Next.js web build), TypeScript typecheck (web).
+
+Web steps run with `NEXT_PUBLIC_DEV_MODE=true` so no Clerk keys are required in CI.
+
+Mobile CI is intentionally excluded until after the first web release.
 
 | Step | Failure means | Fix locally |
 |------|--------------|-------------|
 | Install JS dependencies | `pnpm-lock.yaml` is out of sync | `pnpm install` then commit the updated lockfile |
 | Build (turbo) | A package fails to compile | `make build` |
-| Typecheck mobile | TypeScript errors in `apps/mobile` | `pnpm --filter @studigiital/mobile typecheck` |
-| Test mobile | A Jest test is failing | `pnpm --filter @studigiital/mobile test` |
+| Typecheck web | TypeScript errors in `apps/web` | `pnpm --filter @studigiital/web typecheck` |
 
 ---
 
@@ -35,14 +38,15 @@ Three jobs run in parallel. All three must pass before merging.
 
 ## Job: Backend
 
-**What it checks:** Python dependency install, Ruff lint, Mypy strict type-check, and a smoke-import to confirm the FastAPI app loads cleanly.
+**What it checks:** Python dependency install, Ruff lint, Mypy strict type-check, smoke-import, and the full pytest suite.
 
 | Step | Failure means | Fix locally |
 |------|--------------|-------------|
 | Install Python dependencies | `uv.lock` is out of sync or a dep is broken | `cd apps/backend && uv sync --all-extras` |
-| Lint (ruff) | Style or lint violation | `cd apps/backend && make lint-fix` |
+| Lint (ruff) | Style or lint violation | `cd apps/backend && uv run ruff check --fix .` |
 | Type-check (mypy) | Type error in `src/` | `make backend-typecheck` |
 | Health check (import test) | App fails to import at startup | Run `make backend-dev` and read the traceback |
+| Test (pytest) | A unit or integration test is failing | `make backend-test` |
 
 ---
 

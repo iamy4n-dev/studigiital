@@ -20,7 +20,8 @@ def skill() -> GenerateNoteSkill:
 
 
 async def test_skill_returns_title_body_and_key_points(skill: GenerateNoteSkill) -> None:
-    out = await skill.run(GenerateNoteInput(text="Photosynthesis is how plants make food from sunlight."))
+    inp = GenerateNoteInput(text="Photosynthesis is how plants make food from sunlight.")
+    out = await skill.run(inp)
     assert out.title
     assert out.body_markdown
     assert len(out.key_points) >= 1

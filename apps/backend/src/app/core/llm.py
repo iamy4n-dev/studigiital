@@ -44,7 +44,7 @@ class AnthropicBackend(LLMBackend):
             messages=[{"role": "user", "content": prompt}],
         )
         tool_block = next(b for b in response.content if b.type == "tool_use")
-        return dict(tool_block.input)  # type: ignore[arg-type]
+        return dict(tool_block.input)
 
 
 class OpenAICompatBackend(LLMBackend):
@@ -77,7 +77,7 @@ class OpenAICompatBackend(LLMBackend):
             ],
             tool_choice="required",  # Ollama/LM Studio only support string values
         )
-        args = response.choices[0].message.tool_calls[0].function.arguments  # type: ignore[index]
+        args = response.choices[0].message.tool_calls[0].function.arguments  # type: ignore[index, union-attr]
         return json.loads(args)  # type: ignore[no-any-return]
 
 

@@ -16,9 +16,10 @@ def skill() -> InferFormatSkill:
 
 
 async def test_skill_infers_format_for_definition_text(skill: InferFormatSkill) -> None:
-    out = await skill.run(
-        InferFormatInput(text="Photosynthesis: the process by which plants make food from sunlight.")
+    inp = InferFormatInput(
+        text="Photosynthesis: the process by which plants make food from sunlight."
     )
+    out = await skill.run(inp)
     assert out.skill_name in {"generate_flashcard", "generate_note", "generate_quiz"}
 
 

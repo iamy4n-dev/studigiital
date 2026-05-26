@@ -26,12 +26,16 @@ jobs:
 
       - name: Build (turbo)
         run: pnpm turbo build
+        env:
+          NEXT_PUBLIC_DEV_MODE: "true"
+          NEXT_PUBLIC_API_URL: "http://localhost:8000"
 
-      - name: Typecheck mobile
-        run: pnpm --filter @studigiital/mobile typecheck
+      - name: Typecheck web
+        run: pnpm --filter @studigiital/web typecheck
+        env:
+          NEXT_PUBLIC_DEV_MODE: "true"
+          NEXT_PUBLIC_API_URL: "http://localhost:8000"
 
-      - name: Test mobile
-        run: pnpm --filter @studigiital/mobile test
 
   api-contract:
     name: API contract (stale check)
@@ -104,3 +108,7 @@ jobs:
       - name: Health check (import test)
         working-directory: apps/backend
         run: uv run python -c "from app.main import app; assert app.title == 'Studigital API'"
+
+      - name: Test (pytest)
+        working-directory: apps/backend
+        run: uv run pytest tests/ -v

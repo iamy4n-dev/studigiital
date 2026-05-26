@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -24,7 +24,7 @@ def _flatten_schema(schema: dict[str, Any]) -> dict[str, Any]:
             return [resolve(item) for item in node]
         return node
 
-    return resolve(schema)  # type: ignore[return-value]
+    return cast(dict[str, Any], resolve(schema))
 
 
 class BaseSkill[InputT: BaseModel, OutputT: BaseModel](ABC):
