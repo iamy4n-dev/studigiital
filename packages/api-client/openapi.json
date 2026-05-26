@@ -5,6 +5,52 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/captures/suggest-tags": {
+      "post": {
+        "tags": [
+          "captures"
+        ],
+        "summary": "Suggest Tags",
+        "operationId": "suggest_tags_api_v1_captures_suggest_tags_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestTagsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestTagsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/captures/transform": {
       "post": {
         "tags": [
@@ -544,6 +590,43 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "SuggestTagsRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text"
+          },
+          "existing_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Existing Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SuggestTagsRequest"
+      },
+      "SuggestTagsResponse": {
+        "properties": {
+          "suggestions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggestions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggestions"
+        ],
+        "title": "SuggestTagsResponse"
       },
       "TagOut": {
         "properties": {

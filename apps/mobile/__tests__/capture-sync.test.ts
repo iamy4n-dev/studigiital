@@ -1,6 +1,6 @@
 jest.mock("expo-sqlite");
 jest.mock("expo-task-manager");
-jest.mock("expo-background-fetch");
+jest.mock("expo-background-task");
 
 import * as SQLiteMock from "expo-sqlite";
 import { enqueue, initQueue } from "../src/capture-queue";

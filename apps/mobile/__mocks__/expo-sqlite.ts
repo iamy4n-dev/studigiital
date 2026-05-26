@@ -1,4 +1,4 @@
-// In-memory mock for expo-sqlite — handles SQL patterns used by capture-queue.ts and capture-mode-prefs.ts
+// In-memory mock for expo-sqlite — handles SQL patterns used by capture-queue.ts, capture-mode-prefs.ts, and tag-store.ts
 
 interface QueueRow {
   id: string;
@@ -9,17 +9,24 @@ interface QueueRow {
   result_json: string | null;
 }
 
+interface TagRow {
+  name: string;
+  color: string;
+}
+
 const _rows: QueueRow[] = [];
 const _prefs = new Map<string, string>();
+const _tags = new Map<string, string>();
 
 export function __reset(): void {
   _rows.length = 0;
   _prefs.clear();
+  _tags.clear();
 }
 
 const _db = {
   async execAsync(_sql: string): Promise<void> {
-    // CREATE TABLE IF NOT EXISTS — no-op, _rows array is always ready
+    // CREATE TABLE IF NOT EXISTS — no-op, in-memory stores are always ready
   },
 
   async runAsync(sql: string, params: unknown[]): Promise<void> {
@@ -47,16 +54,31 @@ const _db = {
     } else if (sql.startsWith("INSERT OR REPLACE INTO prefs")) {
       const [key, value] = params as [string, string];
       _prefs.set(key, value);
+    } else if (sql.startsWith("INSERT INTO tags")) {
+      const [name, color] = params as [string, string];
+      _tags.set(name, color);
     }
   },
 
-  async getAllAsync<T>(sql: string, params: unknown[]): Promise<T[]> {
+  async getFirstAsync<T>(sql: string, params: unknown[]): Promise<T | null> {
+    if (sql.startsWith("SELECT color FROM tags WHERE name")) {
+      const name = params[0] as string;
+      const color = _tags.get(name);
+      return color !== undefined ? ({ color } as unknown as T) : null;
+    }
+    return null;
+  },
+
+  async getAllAsync<T>(sql: string, params?: unknown[]): Promise<T[]> {
     if (sql.startsWith("SELECT value FROM prefs")) {
-      const key = params[0] as string;
+      const key = (params ?? [])[0] as string;
       const value = _prefs.get(key);
       return (value !== undefined ? [{ value }] : []) as unknown as T[];
     }
-    return _rows.filter((r) => r.status === params[0]) as unknown as T[];
+    if (sql.startsWith("SELECT name, color FROM tags")) {
+      return Array.from(_tags.entries()).map(([name, color]) => ({ name, color })) as unknown as T[];
+    }
+    return _rows.filter((r) => r.status === (params ?? [])[0]) as unknown as T[];
   },
 };
 

@@ -32,13 +32,13 @@
     "plugins": [
       "expo-router",
       "expo-camera",
+      "expo-background-task",
       [
         "expo-sqlite",
         {
           "enableFTS": true
         }
-      ],
-      "expo-font"
+      ]
     ],
     "experiments": {
       "typedRoutes": true

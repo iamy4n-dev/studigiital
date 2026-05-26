@@ -33,6 +33,15 @@ export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
 
+export type SuggestTagsRequest = {
+    text: string;
+    existing_tags?: Array<(string)>;
+};
+
+export type SuggestTagsResponse = {
+    suggestions: Array<(string)>;
+};
+
 export type TagOut = {
     id: string;
     name: string;
@@ -78,6 +87,12 @@ export type ValidationError = {
         [key: string]: unknown;
     };
 };
+
+export type SuggestTagsApiV1CapturesSuggestTagsPostData = {
+    requestBody: SuggestTagsRequest;
+};
+
+export type SuggestTagsApiV1CapturesSuggestTagsPostResponse = (SuggestTagsResponse);
 
 export type TransformCaptureApiV1CapturesTransformPostData = {
     requestBody: TransformRequest;

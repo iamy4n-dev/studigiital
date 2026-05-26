@@ -13,5 +13,13 @@ class Settings(BaseSettings):
     clerk_jwks_url: str = "https://api.clerk.com/v1/jwks"
     dev_mode: bool = False
 
+    # LLM backend — "anthropic" uses Anthropic SDK directly;
+    # "openai_compat" works with Ollama, LM Studio, or any OpenAI-compatible server.
+    llm_provider: str = "anthropic"
+    llm_base_url: str = "http://localhost:11434/v1"  # Ollama default; use :1234 for LM Studio
+    llm_model_infer: str = "claude-haiku-4-5-20251001"
+    llm_model_free: str = "claude-haiku-4-5-20251001"
+    llm_model_paid: str = "claude-sonnet-4-6"
+
 
 settings = Settings()

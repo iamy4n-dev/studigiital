@@ -1,15 +1,35 @@
 from __future__ import annotations
 
+import copy
 from abc import ABC, abstractmethod
 from typing import Any
 
-import anthropic
 from pydantic import BaseModel
+
+from app.core.llm import LLMBackend
+
+
+def _flatten_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Resolve $ref pointers inline so local LLMs receive a flat schema without $defs."""
+    schema = copy.deepcopy(schema)
+    defs = schema.pop("$defs", {})
+
+    def resolve(node: Any) -> Any:
+        if isinstance(node, dict):
+            if "$ref" in node:
+                name = node["$ref"].rsplit("/", 1)[-1]
+                return resolve(copy.deepcopy(defs[name]))
+            return {k: resolve(v) for k, v in node.items()}
+        if isinstance(node, list):
+            return [resolve(item) for item in node]
+        return node
+
+    return resolve(schema)  # type: ignore[return-value]
 
 
 class BaseSkill[InputT: BaseModel, OutputT: BaseModel](ABC):
-    def __init__(self, client: anthropic.AsyncAnthropic, model: str) -> None:
-        self._client = client
+    def __init__(self, backend: LLMBackend, model: str) -> None:
+        self._backend = backend
         self.model = model
 
     @abstractmethod
@@ -20,19 +40,6 @@ class BaseSkill[InputT: BaseModel, OutputT: BaseModel](ABC):
         prompt: str,
         output_schema: type[OutputT],
     ) -> OutputT:
-        schema: dict[str, Any] = output_schema.model_json_schema()
-        response = await self._client.messages.create(
-            model=self.model,
-            max_tokens=1024,
-            tools=[
-                {
-                    "name": "output",
-                    "description": "Return the structured output.",
-                    "input_schema": schema,
-                }
-            ],
-            tool_choice={"type": "tool", "name": "output"},
-            messages=[{"role": "user", "content": prompt}],
-        )
-        tool_block = next(b for b in response.content if b.type == "tool_use")
-        return output_schema.model_validate(tool_block.input)
+        schema = _flatten_schema(output_schema.model_json_schema())
+        raw = await self._backend.call_structured(prompt, schema, self.model)
+        return output_schema.model_validate(raw)

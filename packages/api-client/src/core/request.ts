@@ -185,7 +185,9 @@ export const sendRequest = async (
 		headers,
 		body: body ?? formData,
 		method: options.method,
-		signal: controller.signal,
+		// Cast required: RN <0.82 defines global.AbortSignal.onabort as non-nullable,
+		// conflicting with @types/node's AbortSignal which allows null.
+		signal: controller.signal as unknown as RequestInit['signal'],
 	};
 
 	if (config.WITH_CREDENTIALS) {
