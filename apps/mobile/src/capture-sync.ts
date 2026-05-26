@@ -1,4 +1,4 @@
-import * as BackgroundFetch from "expo-background-fetch";
+import * as BackgroundTask from "expo-background-task";
 import * as TaskManager from "expo-task-manager";
 
 import { getByStatus, updateStatus } from "./capture-queue";
@@ -7,7 +7,7 @@ const SYNC_TASK = "CAPTURE_QUEUE_SYNC";
 
 TaskManager.defineTask(SYNC_TASK, async () => {
   await drainQueue("free");
-  return BackgroundFetch.BackgroundFetchResult.NewData;
+  return BackgroundTask.BackgroundTaskResult.Success;
 });
 
 export async function drainQueue(tier: "free" | "paid" = "free"): Promise<void> {
@@ -33,7 +33,7 @@ export async function drainQueue(tier: "free" | "paid" = "free"): Promise<void> 
 }
 
 export async function registerSyncTask(): Promise<void> {
-  await BackgroundFetch.registerTaskAsync(SYNC_TASK, {
+  await BackgroundTask.registerTaskAsync(SYNC_TASK, {
     minimumInterval: 60,
     stopOnTerminate: false,
     startOnBoot: true,

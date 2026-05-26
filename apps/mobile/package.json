@@ -27,7 +27,7 @@
     "@studigiital/api-client": "workspace:*",
     "@studigiital/types": "workspace:*",
     "expo": "~54.0.34",
-    "expo-background-fetch": "~14.0.9",
+    "expo-background-task": "~1.0.10",
     "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.13",
     "expo-file-system": "~19.0.22",
