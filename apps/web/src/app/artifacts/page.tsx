@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/skills";
 import { buildCaptureUrl } from "@/lib/captureUrl";
+import { tagColors } from "@/lib/tagColor";
 
 interface ArtifactOut {
   id: string;
@@ -13,6 +14,7 @@ interface ArtifactOut {
   content: Record<string, unknown>;
   created_at: string;
   source_text: string;
+  tags: string[];
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -113,10 +115,22 @@ function ArtifactCard({ artifact }: { artifact: ArtifactOut }) {
         <span style={styles.timestamp}>{date}</span>
       </div>
       <p style={styles.preview}>{preview}</p>
+      {artifact.tags.length > 0 && (
+        <div style={styles.tagRow}>
+          {artifact.tags.map((tag) => {
+            const { bg, text } = tagColors(tag);
+            return (
+              <span key={tag} style={{ ...styles.tag, background: bg, color: text }}>
+                {tag}
+              </span>
+            );
+          })}
+        </div>
+      )}
       {rerunSkills && artifact.source_text && (
         <div style={styles.rerunRow}>
           {rerunSkills.map((s) => (
-            <a key={s} href={buildCaptureUrl(artifact.source_text, s)} style={styles.rerunLink}>
+            <a key={s} href={buildCaptureUrl(artifact.source_text, s, artifact.id)} style={styles.rerunLink}>
               Make {SKILL_LABELS[s]} →
             </a>
           ))}
@@ -267,5 +281,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     color: "#6b7280",
     textDecoration: "none",
+  },
+  tagRow: {
+    display: "flex",
+    gap: "0.375rem",
+    flexWrap: "wrap" as const,
+  },
+  tag: {
+    fontSize: "0.6875rem",
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    padding: "0.15rem 0.5rem",
+    borderRadius: 999,
   },
 };

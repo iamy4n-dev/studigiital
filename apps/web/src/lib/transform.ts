@@ -7,6 +7,8 @@ export type FlashcardResult = {
   skill_name: "generate_flashcard";
   cards: FlashcardPair[];
   source_summary: string;
+  suggested_tags: string[];
+  artifact_id: string;
 };
 
 export type NoteResult = {
@@ -14,6 +16,8 @@ export type NoteResult = {
   title: string;
   body_markdown: string;
   key_points: string[];
+  suggested_tags: string[];
+  artifact_id: string;
 };
 
 export type QuizQuestion = {
@@ -26,6 +30,8 @@ export type QuizQuestion = {
 export type QuizResult = {
   skill_name: "generate_quiz";
   questions: QuizQuestion[];
+  suggested_tags: string[];
+  artifact_id: string;
 };
 
 export type SuggestTagsResult = {

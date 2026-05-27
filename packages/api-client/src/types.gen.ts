@@ -9,6 +9,7 @@ export type ArtifactOut = {
     };
     created_at: string;
     source_text: string;
+    tags?: Array<(string)>;
 };
 
 export type CaptureCreate = {
@@ -34,6 +35,8 @@ export type FlashcardTransformResponse = {
     skill_name: "generate_flashcard";
     cards: Array<FlashcardPair>;
     source_summary: string;
+    suggested_tags?: Array<(string)>;
+    artifact_id?: string;
 };
 
 export type HTTPValidationError = {
@@ -45,6 +48,8 @@ export type NoteTransformResponse = {
     title: string;
     body_markdown: string;
     key_points: Array<(string)>;
+    suggested_tags?: Array<(string)>;
+    artifact_id?: string;
 };
 
 export type QuizQuestion = {
@@ -57,6 +62,8 @@ export type QuizQuestion = {
 export type QuizTransformResponse = {
     skill_name: "generate_quiz";
     questions: Array<QuizQuestion>;
+    suggested_tags?: Array<(string)>;
+    artifact_id?: string;
 };
 
 export type SuggestTagsRequest = {
@@ -69,16 +76,16 @@ export type SuggestTagsResponse = {
 };
 
 export type TagOut = {
-    id: string;
     name: string;
-    color: string;
-    mastery_score: number;
+    bg: string;
+    text: string;
 };
 
 export type TransformRequest = {
     text: string;
     tier?: 'free' | 'paid';
     skill_name?: (string | null);
+    source_artifact_id?: (string | null);
 };
 
 export type tier = 'free' | 'paid';
@@ -143,13 +150,14 @@ export type GetArtifactApiV1ArtifactsArtifactIdGetData = {
 
 export type GetArtifactApiV1ArtifactsArtifactIdGetResponse = (ArtifactOut);
 
-export type ListTagsApiV1TagsGetResponse = (Array<TagOut>);
-
-export type GetTagApiV1TagsTagIdGetData = {
-    tagId: string;
+export type SetArtifactTagsApiV1ArtifactsArtifactIdTagsPutData = {
+    artifactId: string;
+    requestBody: Array<(string)>;
 };
 
-export type GetTagApiV1TagsTagIdGetResponse = (TagOut);
+export type SetArtifactTagsApiV1ArtifactsArtifactIdTagsPutResponse = (ArtifactOut);
+
+export type ListTagsApiV1TagsGetResponse = (Array<TagOut>);
 
 export type GetMeApiV1UsersMeGetResponse = (UserClaims);
 

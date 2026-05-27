@@ -299,6 +299,68 @@
         }
       }
     },
+    "/api/v1/artifacts/{artifact_id}/tags": {
+      "put": {
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "Set Artifact Tags",
+        "operationId": "set_artifact_tags_api_v1_artifacts__artifact_id__tags_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "title": "Tag Names"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tags/": {
       "get": {
         "tags": [
@@ -321,49 +383,12 @@
               }
             }
           }
-        }
-      }
-    },
-    "/api/v1/tags/{tag_id}": {
-      "get": {
-        "tags": [
-          "tags"
-        ],
-        "summary": "Get Tag",
-        "operationId": "get_tag_api_v1_tags__tag_id__get",
-        "parameters": [
+        },
+        "security": [
           {
-            "name": "tag_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Tag Id"
-            }
+            "HTTPBearer": []
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TagOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
+        ]
       }
     },
     "/api/v1/users/me": {
@@ -513,6 +538,14 @@
           "source_text": {
             "type": "string",
             "title": "Source Text"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
           }
         },
         "type": "object",
@@ -629,6 +662,19 @@
           "source_summary": {
             "type": "string",
             "title": "Source Summary"
+          },
+          "suggested_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggested Tags",
+            "default": []
+          },
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id",
+            "default": ""
           }
         },
         "type": "object",
@@ -673,6 +719,19 @@
             },
             "type": "array",
             "title": "Key Points"
+          },
+          "suggested_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggested Tags",
+            "default": []
+          },
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id",
+            "default": ""
           }
         },
         "type": "object",
@@ -729,6 +788,19 @@
             },
             "type": "array",
             "title": "Questions"
+          },
+          "suggested_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggested Tags",
+            "default": []
+          },
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id",
+            "default": ""
           }
         },
         "type": "object",
@@ -777,29 +849,24 @@
       },
       "TagOut": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
           "name": {
             "type": "string",
             "title": "Name"
           },
-          "color": {
+          "bg": {
             "type": "string",
-            "title": "Color"
+            "title": "Bg"
           },
-          "mastery_score": {
-            "type": "number",
-            "title": "Mastery Score"
+          "text": {
+            "type": "string",
+            "title": "Text"
           }
         },
         "type": "object",
         "required": [
-          "id",
           "name",
-          "color",
-          "mastery_score"
+          "bg",
+          "text"
         ],
         "title": "TagOut"
       },
@@ -829,6 +896,17 @@
               }
             ],
             "title": "Skill Name"
+          },
+          "source_artifact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Artifact Id"
           }
         },
         "type": "object",

@@ -15,6 +15,18 @@ test("text only — no skill param", () => {
   expect(parsed.searchParams.get("text")).toBe("hello world");
 });
 
+test("sourceArtifactId is included as source_artifact_id param", () => {
+  const url = buildCaptureUrl("hello", "generate_quiz", "art-123");
+  const parsed = new URL(url, "http://x");
+  expect(parsed.searchParams.get("source_artifact_id")).toBe("art-123");
+});
+
+test("no sourceArtifactId — source_artifact_id param absent", () => {
+  const url = buildCaptureUrl("hello", "generate_quiz");
+  const parsed = new URL(url, "http://x");
+  expect(parsed.searchParams.get("source_artifact_id")).toBeNull();
+});
+
 test("special characters are encoded correctly", () => {
   const url = buildCaptureUrl("a & b = c");
   const parsed = new URL(url, "http://x");
