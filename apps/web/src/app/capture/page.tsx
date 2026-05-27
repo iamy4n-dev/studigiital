@@ -153,7 +153,7 @@ function CaptureShell({
         ) : phase.status === "submitting" ? (
           <TransformingView />
         ) : phase.status === "result" ? (
-          <ResultView data={phase.data} onReset={reset} onAlsoMake={handleAlsoMake} />
+          <ResultView data={phase.data} onReset={reset} onAlsoMake={handleAlsoMake} getToken={getToken} />
         ) : (
           <ErrorView message={phase.message} onReset={reset} />
         )}
@@ -221,14 +221,93 @@ function TransformingView() {
   );
 }
 
+function TagConfirm({
+  suggestions,
+  artifactId,
+  getToken,
+}: {
+  suggestions: string[];
+  artifactId: string;
+  getToken: () => Promise<string | null>;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set(suggestions));
+  const [saved, setSaved] = useState(false);
+
+  if (suggestions.length === 0) return null;
+
+  function toggle(tag: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+  }
+
+  async function confirmTags() {
+    try {
+      const token = await getToken();
+      await fetch(`${API_URL}/api/v1/artifacts/${artifactId}/tags`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify([...selected]),
+      });
+      setSaved(true);
+    } catch {
+      // non-critical; silently ignore
+    }
+  }
+
+  if (saved) {
+    return (
+      <div style={styles.tagConfirmRow}>
+        {[...selected].map((tag) => (
+          <span key={tag} style={styles.tagSaved}>{tag}</span>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.tagConfirmContainer}>
+      <p style={styles.tagConfirmLabel}>Suggested tags — keep what fits:</p>
+      <div style={styles.tagConfirmRow}>
+        {suggestions.map((tag) => (
+          <button
+            key={tag}
+            type="button"
+            onClick={() => toggle(tag)}
+            style={{
+              ...styles.tagToggle,
+              ...(selected.has(tag) ? styles.tagToggleActive : {}),
+            }}
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+      {selected.size > 0 && (
+        <button type="button" style={styles.tagSaveButton} onClick={confirmTags}>
+          Save tags →
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ResultView({
   data,
   onReset,
   onAlsoMake,
+  getToken,
 }: {
   data: TransformResult;
   onReset: () => void;
   onAlsoMake: (skill: SkillName) => void;
+  getToken: () => Promise<string | null>;
 }) {
   const alsoMake = otherSkills(data.skill_name);
   return (
@@ -269,6 +348,13 @@ function ResultView({
             <QuizCard key={qi} question={q} />
           ))}
         </>
+      )}
+      {data.suggested_tags?.length > 0 && (
+        <TagConfirm
+          suggestions={data.suggested_tags}
+          artifactId={data.artifact_id}
+          getToken={getToken}
+        />
       )}
       <p style={styles.savedNotice}>
         Saved to history ·{" "}
@@ -564,5 +650,60 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column" as const,
     gap: "0.25rem",
     fontSize: "0.9375rem",
+  },
+  tagConfirmContainer: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "0.5rem",
+    padding: "0.75rem",
+    background: "#f9fafb",
+    borderRadius: 8,
+    border: "1px solid #e5e7eb",
+  },
+  tagConfirmLabel: {
+    fontSize: "0.8125rem",
+    color: "#6b7280",
+    fontWeight: 500,
+    margin: 0,
+  },
+  tagConfirmRow: {
+    display: "flex",
+    gap: "0.375rem",
+    flexWrap: "wrap" as const,
+    alignItems: "center",
+  },
+  tagToggle: {
+    fontSize: "0.8125rem",
+    fontWeight: 600,
+    padding: "0.25rem 0.625rem",
+    borderRadius: 999,
+    border: "1.5px solid #d1d5db",
+    background: "#fff",
+    color: "#6b7280",
+    cursor: "pointer",
+  },
+  tagToggleActive: {
+    border: "1.5px solid #1a1a1a",
+    background: "#1a1a1a",
+    color: "#fff",
+  },
+  tagSaveButton: {
+    alignSelf: "flex-start" as const,
+    fontSize: "0.8125rem",
+    fontWeight: 600,
+    padding: "0.3rem 0.75rem",
+    borderRadius: 6,
+    border: "none",
+    background: "#1a1a1a",
+    color: "#fff",
+    cursor: "pointer",
+  },
+  tagSaved: {
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    padding: "0.2rem 0.5rem",
+    borderRadius: 999,
+    background: "#dcfce7",
+    color: "#166534",
   },
 };

@@ -26,6 +26,9 @@ def _make_backend(*side_effects: dict) -> LLMBackend:
     return backend
 
 
+_TAGS_RESPONSE = {"suggestions": ["biology", "photosynthesis"]}
+
+
 @pytest.fixture
 def mock_backend() -> LLMBackend:
     return _make_backend(
@@ -39,6 +42,7 @@ def mock_backend() -> LLMBackend:
             ],
             "source_summary": "Biology text about photosynthesis",
         },
+        _TAGS_RESPONSE,
     )
 
 
@@ -77,11 +81,40 @@ async def test_transform_returns_flashcard_schema(mock_backend: LLMBackend) -> N
 
 
 @pytest.mark.asyncio
+async def test_transform_returns_suggested_tags(mock_backend: LLMBackend) -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/captures/transform",
+            json={"text": "Photosynthesis is the process plants use to make food from sunlight."},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "suggested_tags" in body
+    assert isinstance(body["suggested_tags"], list)
+
+
+@pytest.mark.asyncio
+async def test_transform_returns_artifact_id(mock_backend: LLMBackend) -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/captures/transform",
+            json={"text": "Photosynthesis is the process plants use to make food from sunlight."},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "artifact_id" in body
+    assert isinstance(body["artifact_id"], str)
+    assert len(body["artifact_id"]) > 0
+
+
+@pytest.mark.asyncio
 async def test_transform_calls_infer_then_generate(mock_backend: LLMBackend) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         await client.post("/api/v1/captures/transform", json={"text": "Some text"})
 
-    assert mock_backend.call_structured.call_count == 2  # type: ignore[attr-defined]
+    assert mock_backend.call_structured.call_count == 3  # infer + generate + suggest_tags
 
 
 @pytest.mark.asyncio
@@ -151,12 +184,13 @@ async def test_transform_when_backend_times_out_returns_500() -> None:
 
 @pytest.mark.asyncio
 async def test_transform_with_skill_name_override_skips_infer() -> None:
-    """When skill_name is supplied, the infer step is bypassed — only one LLM call."""
+    """When skill_name is supplied, the infer step is bypassed — generate + suggest_tags only."""
     direct_backend = _make_backend(
         {
             "cards": [{"front": "What do plants need for photosynthesis?", "back": "Sunlight"}],
             "source_summary": "Photosynthesis overview",
-        }
+        },
+        _TAGS_RESPONSE,
     )
     app.dependency_overrides[get_llm_backend] = lambda: direct_backend
 
@@ -170,7 +204,7 @@ async def test_transform_with_skill_name_override_skips_infer() -> None:
         )
 
     assert response.status_code == 200
-    assert direct_backend.call_structured.call_count == 1  # type: ignore[attr-defined]
+    assert direct_backend.call_structured.call_count == 2  # generate + suggest_tags (no infer)  # type: ignore[attr-defined]
     assert response.json()["skill_name"] == "generate_flashcard"
 
 
@@ -183,6 +217,7 @@ async def test_transform_returns_note_schema_when_inferred() -> None:
             "body_markdown": "Water evaporates, condenses into clouds, and falls as rain.",
             "key_points": ["Evaporation", "Condensation", "Precipitation"],
         },
+        _TAGS_RESPONSE,
     )
     app.dependency_overrides[get_llm_backend] = lambda: note_backend
 
@@ -214,6 +249,7 @@ async def test_transform_returns_quiz_schema_when_inferred() -> None:
                 }
             ]
         },
+        _TAGS_RESPONSE,
     )
     app.dependency_overrides[get_llm_backend] = lambda: quiz_backend
 

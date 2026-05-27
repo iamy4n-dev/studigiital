@@ -58,3 +58,14 @@ async def test_list_artifacts_includes_source_text() -> None:
     body = response.json()
     assert len(body) == 1
     assert body[0]["source_text"] == "Photosynthesis converts sunlight to energy"
+
+
+@pytest.mark.asyncio
+async def test_list_artifacts_includes_tags() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/artifacts/")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "tags" in body[0]
+    assert isinstance(body[0]["tags"], list)

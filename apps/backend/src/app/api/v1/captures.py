@@ -55,6 +55,8 @@ class FlashcardTransformResponse(BaseModel):
     skill_name: Literal["generate_flashcard"]
     cards: list[FlashcardPair]
     source_summary: str
+    suggested_tags: list[str] = []
+    artifact_id: str = ""
 
 
 class NoteTransformResponse(BaseModel):
@@ -62,11 +64,15 @@ class NoteTransformResponse(BaseModel):
     title: str
     body_markdown: str
     key_points: list[str]
+    suggested_tags: list[str] = []
+    artifact_id: str = ""
 
 
 class QuizTransformResponse(BaseModel):
     skill_name: Literal["generate_quiz"]
     questions: list[QuizQuestion]
+    suggested_tags: list[str] = []
+    artifact_id: str = ""
 
 
 TransformResponse = Annotated[
@@ -137,6 +143,11 @@ async def transform_capture(
     else:
         raise ValueError(f"Unsupported skill: {skill_name!r}")
 
+    tags_skill = SuggestTagsSkill(backend, settings.llm_model_infer)
+    tags_out = await tags_skill.run(SuggestTagsInput(text=payload.text))
+    result.suggested_tags = tags_out.suggestions
+
+    artifact_id = str(uuid.uuid4())
     capture = Capture(
         id=str(uuid.uuid4()),
         user_id=user.user_id,
@@ -147,6 +158,7 @@ async def transform_capture(
     session.add(capture)
     await session.flush()  # INSERT capture before artifact references it via FK
     artifact = Artifact(
+        id=artifact_id,
         capture_id=capture.id,
         artifact_type=skill_name,
         content=result.model_dump(),
@@ -154,6 +166,7 @@ async def transform_capture(
     session.add(artifact)
     await session.commit()
 
+    result.artifact_id = artifact_id
     return result
 
 
