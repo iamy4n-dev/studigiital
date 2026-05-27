@@ -4,8 +4,6 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { MarkdownContent } from "@/lib/MarkdownContent";
-import { createDrill, isDone, rateFailed, ratePassed } from "@/lib/drillQueue";
-import type { DrillState } from "@/lib/drillQueue";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
@@ -217,17 +215,19 @@ function DrillView({
   getToken,
   config,
   onExit,
-  seedIds,
 }: {
   getToken: () => Promise<string | null>;
   config: DrillConfig;
   onExit: () => void;
-  seedIds?: string[];
 }) {
-  const [drill, setDrill] = useState<DrillState<ArtifactItem> | null>(null);
+  const [originalQueue, setOriginalQueue] = useState<ArtifactItem[]>([]);
+  const [activeQueue, setActiveQueue] = useState<ArtifactItem[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [learnedCount, setLearnedCount] = useState(0);
+  const [weakSpots, setWeakSpots] = useState<Set<string>>(new Set());
+  const [drillPhase, setDrillPhase] = useState<"drilling" | "complete">("drilling");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
   const tokenRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -244,10 +244,9 @@ function DrillView({
         });
         if (!res.ok) throw new Error(`${res.status}`);
         const data: QueueResponse = await res.json();
-        const artifacts = seedIds
-          ? data.artifacts.filter((a) => seedIds.includes(a.id))
-          : data.artifacts;
-        setDrill(createDrill(artifacts));
+        setOriginalQueue(data.artifacts);
+        setActiveQueue(data.artifacts);
+        setTotalCount(data.artifacts.length);
       } catch {
         setError("Could not load drill queue");
       } finally {
@@ -255,7 +254,7 @@ function DrillView({
       }
     }
     load();
-  }, [getToken, config, seedIds]);
+  }, [getToken, config]);
 
   async function recordEvent(artifactId: string, outcome: "passed" | "failed") {
     const token = tokenRef.current;
@@ -269,15 +268,31 @@ function DrillView({
     });
   }
 
-  function rate(outcome: "passed" | "failed") {
-    setDrill((prev) => {
-      if (!prev) return prev;
-      const current = prev.queue[0];
-      if (current) recordEvent(current.id, outcome);
-      const next = outcome === "passed" ? ratePassed(prev) : rateFailed(prev);
-      if (isDone(next)) setDone(true);
-      return next;
-    });
+  function advance(outcome: "passed" | "failed") {
+    const [current, ...rest] = activeQueue;
+    if (!current) return;
+    recordEvent(current.id, outcome);
+    if (outcome === "passed") {
+      const nextLearned = learnedCount + 1;
+      setLearnedCount(nextLearned);
+      if (rest.length === 0) {
+        setDrillPhase("complete");
+      } else {
+        setActiveQueue(rest);
+      }
+    } else {
+      setWeakSpots((prev) => new Set([...prev, current.id]));
+      setActiveQueue([...rest, current]);
+    }
+  }
+
+  function handleRetry() {
+    const retryQueue = originalQueue.filter((a) => weakSpots.has(a.id));
+    setActiveQueue(retryQueue);
+    setTotalCount(retryQueue.length);
+    setLearnedCount(0);
+    setWeakSpots(new Set());
+    setDrillPhase("drilling");
   }
 
   if (loading) {
@@ -298,7 +313,7 @@ function DrillView({
     );
   }
 
-  if (!drill || drill.total === 0) {
+  if (originalQueue.length === 0) {
     return (
       <div style={s.shell}>
         <Header active="review" />
@@ -310,18 +325,23 @@ function DrillView({
     );
   }
 
-  if (done) {
+  if (drillPhase === "complete") {
     return (
-      <DrillComplete
-        drill={drill}
-        config={config}
-        getToken={getToken}
-        onExit={onExit}
-      />
+      <div style={s.shell}>
+        <Header active="review" />
+        <main style={s.main}>
+          <CompletionScreen
+            totalCount={totalCount}
+            weakSpotCount={weakSpots.size}
+            onRetry={weakSpots.size > 0 ? handleRetry : undefined}
+            onExit={onExit}
+          />
+        </main>
+      </div>
     );
   }
 
-  const artifact = drill.queue[0]!;
+  const artifact = activeQueue[0]!;
 
   return (
     <div style={s.shell}>
@@ -329,9 +349,9 @@ function DrillView({
       <main style={s.main}>
         <div style={s.drillHeader}>
           <button type="button" style={s.exitBtn} onClick={onExit}>← Exit</button>
-          <span style={s.progress}>{drill.learned.size} / {drill.total} learned</span>
+          <span style={s.progress}>{learnedCount} / {totalCount} learned</span>
         </div>
-        <ArtifactCard artifact={artifact} onRate={rate} />
+        <ArtifactCard artifact={artifact} onRate={advance} />
       </main>
     </div>
   );
@@ -341,62 +361,49 @@ function DrillView({
 // Completion screen
 // ---------------------------------------------------------------------------
 
-function DrillComplete({
-  drill,
-  config,
-  getToken,
+function CompletionScreen({
+  totalCount,
+  weakSpotCount,
+  onRetry,
   onExit,
 }: {
-  drill: DrillState<ArtifactItem>;
-  config: DrillConfig;
-  getToken: () => Promise<string | null>;
+  totalCount: number;
+  weakSpotCount: number;
+  onRetry?: () => void;
   onExit: () => void;
 }) {
-  const [retrying, setRetrying] = useState(false);
-  const weakCount = drill.weakSpots.size;
-  const weakIds = [...drill.weakSpots];
-
-  if (retrying) {
-    return (
-      <DrillView
-        getToken={getToken}
-        config={config}
-        onExit={onExit}
-        seedIds={weakIds}
-      />
-    );
-  }
-
   return (
-    <div style={s.shell}>
-      <Header active="review" />
-      <main style={s.main}>
-        <div style={s.completionCard}>
-          <span style={{ fontSize: "2.5rem" }}>✓</span>
-          <h2 style={s.completionHeading}>
-            All {drill.total} artifact{drill.total !== 1 ? "s" : ""} learned
-          </h2>
-          {weakCount > 0 && (
-            <p style={s.completionSub}>
-              {weakCount} took multiple tries
-            </p>
-          )}
-          <div style={s.completionActions}>
-            {weakCount > 0 && (
-              <button
-                type="button"
-                style={s.retryBtn}
-                onClick={() => setRetrying(true)}
-              >
-                Retry {weakCount} weak spot{weakCount !== 1 ? "s" : ""}
-              </button>
-            )}
-            <button type="button" style={s.exitBtn} onClick={onExit}>
-              Exit
-            </button>
-          </div>
-        </div>
-      </main>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <div style={s.card}>
+        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>
+          All {totalCount} artifact{totalCount !== 1 ? "s" : ""} learned
+        </h2>
+        {weakSpotCount > 0 ? (
+          <p style={{ margin: 0, color: "#6b7280", fontSize: "0.9375rem" }}>
+            {weakSpotCount} took multiple tries.
+          </p>
+        ) : (
+          <p style={{ margin: 0, color: "#166534", fontSize: "0.9375rem" }}>
+            Perfect run — no weak spots.
+          </p>
+        )}
+      </div>
+      {onRetry && (
+        <button
+          type="button"
+          style={{ ...s.startBtn, background: "#1a1a1a" }}
+          onClick={onRetry}
+        >
+          Retry weak spots ({weakSpotCount})
+        </button>
+      )}
+      <button
+        type="button"
+        style={{ ...s.startBtn, background: "#f3f4f6", color: "#374151" }}
+        onClick={onExit}
+      >
+        Exit drill
+      </button>
     </div>
   );
 }
@@ -429,12 +436,12 @@ function FlashcardCard({
   onRate: (outcome: "passed" | "failed") => void;
 }) {
   const [flipped, setFlipped] = useState(false);
+  const [rated, setRated] = useState<"passed" | "failed" | null>(null);
   const cards = artifact.content.cards as Array<{ front: string; back: string }> | undefined;
   const card = cards?.[0];
 
-  // reset flip when artifact changes
   const artifactId = artifact.id;
-  useEffect(() => setFlipped(false), [artifactId]);
+  useEffect(() => { setFlipped(false); setRated(null); }, [artifactId]);
 
   if (!card) return null;
 
@@ -446,13 +453,22 @@ function FlashcardCard({
         <button type="button" style={s.flipBtn} onClick={() => setFlipped(true)}>
           Reveal answer
         </button>
-      ) : (
+      ) : rated === null ? (
         <div style={s.rateRow}>
-          <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534" }} onClick={() => onRate("passed")}>
+          <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534" }} onClick={() => setRated("passed")}>
             Got it
           </button>
-          <button type="button" style={{ ...s.rateBtn, background: "#fee2e2", color: "#991b1b" }} onClick={() => onRate("failed")}>
+          <button type="button" style={{ ...s.rateBtn, background: "#fee2e2", color: "#991b1b" }} onClick={() => setRated("failed")}>
             Not yet
+          </button>
+        </div>
+      ) : (
+        <div style={s.rateRow}>
+          <span style={{ ...s.ratedLabel, color: rated === "passed" ? "#166534" : "#991b1b", background: rated === "passed" ? "#dcfce7" : "#fee2e2" }}>
+            {rated === "passed" ? "Got it" : "Not yet"}
+          </span>
+          <button type="button" style={s.nextBtn} onClick={() => onRate(rated)}>
+            Next →
           </button>
         </div>
       )}
@@ -501,10 +517,7 @@ function QuizCard({
               key={i}
               type="button"
               disabled={answered}
-              onClick={() => {
-                setSelected(i);
-                setTimeout(() => onRate(i === q.correct_index ? "passed" : "failed"), 800);
-              }}
+              onClick={() => setSelected(i)}
               style={{
                 padding: "0.6rem 0.875rem",
                 borderRadius: 8,
@@ -521,9 +534,14 @@ function QuizCard({
         })}
       </div>
       {answered && (
-        <p style={{ fontSize: "0.875rem", color: correct ? "#166534" : "#991b1b", margin: 0 }}>
-          {correct ? "Correct — " : "Not quite — "}{q.explanation}
-        </p>
+        <>
+          <p style={{ fontSize: "0.875rem", color: correct ? "#166534" : "#991b1b", margin: 0 }}>
+            {correct ? "Correct — " : "Not quite — "}{q.explanation}
+          </p>
+          <button type="button" style={s.nextBtn} onClick={() => onRate(correct ? "passed" : "failed")}>
+            Next →
+          </button>
+        </>
       )}
     </div>
   );
@@ -536,22 +554,37 @@ function NoteCard({
   artifact: ArtifactItem;
   onRate: (outcome: "passed" | "failed") => void;
 }) {
+  const [rated, setRated] = useState<"passed" | "failed" | null>(null);
   const title = artifact.content.title as string | undefined;
   const body = artifact.content.body_markdown as string | undefined;
+
+  const artifactId = artifact.id;
+  useEffect(() => setRated(null), [artifactId]);
 
   return (
     <div style={s.card}>
       <span style={s.typeBadge}>Note</span>
       {title && <p style={{ ...s.cardBody, fontWeight: 700 }}>{title}</p>}
       {body && <MarkdownContent>{body}</MarkdownContent>}
-      <div style={s.rateRow}>
-        <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534" }} onClick={() => onRate("passed")}>
-          Got it
-        </button>
-        <button type="button" style={{ ...s.rateBtn, background: "#fee2e2", color: "#991b1b" }} onClick={() => onRate("failed")}>
-          Not yet
-        </button>
-      </div>
+      {rated === null ? (
+        <div style={s.rateRow}>
+          <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534" }} onClick={() => setRated("passed")}>
+            Got it
+          </button>
+          <button type="button" style={{ ...s.rateBtn, background: "#fee2e2", color: "#991b1b" }} onClick={() => setRated("failed")}>
+            Not yet
+          </button>
+        </div>
+      ) : (
+        <div style={s.rateRow}>
+          <span style={{ ...s.ratedLabel, color: rated === "passed" ? "#166534" : "#991b1b", background: rated === "passed" ? "#dcfce7" : "#fee2e2" }}>
+            {rated === "passed" ? "Got it" : "Not yet"}
+          </span>
+          <button type="button" style={s.nextBtn} onClick={() => onRate(rated)}>
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -570,16 +603,18 @@ function Header({ active }: { active: "dashboard" | "capture" | "review" | "hist
 
   return (
     <header style={s.header}>
-      <Link href="/capture" style={s.logo}>Studigital</Link>
-      <nav style={s.nav}>
-        {navItems.map(({ label, href, key }) =>
-          key === active ? (
-            <span key={key} style={{ ...s.navLink, color: "#1a1a1a", fontWeight: 700 }}>{label}</span>
-          ) : (
-            <Link key={key} href={href} style={s.navLink}>{label}</Link>
-          )
-        )}
-      </nav>
+      <div style={s.headerInner}>
+        <Link href="/dashboard" style={s.logo}>Studigital</Link>
+        <nav style={s.nav}>
+          {navItems.map(({ label, href, key }) =>
+            key === active ? (
+              <span key={key} style={{ ...s.navLink, color: "#1a1a1a", fontWeight: 700 }}>{label}</span>
+            ) : (
+              <Link key={key} href={href} style={s.navLink}>{label}</Link>
+            )
+          )}
+        </nav>
+      </div>
     </header>
   );
 }
@@ -590,9 +625,10 @@ function Header({ active }: { active: "dashboard" | "capture" | "review" | "hist
 
 const s: Record<string, React.CSSProperties> = {
   shell: { minHeight: "100vh", display: "flex", flexDirection: "column", background: "#fafafa" },
-  header: {
+  header: { borderBottom: "1px solid #eee", background: "#fff" },
+  headerInner: {
     display: "flex", alignItems: "center", justifyContent: "space-between",
-    padding: "1rem 1.5rem", borderBottom: "1px solid #eee", background: "#fff",
+    maxWidth: 600, width: "100%", margin: "0 auto", padding: "1rem 1rem",
   },
   logo: { fontWeight: 700, fontSize: "1.125rem", letterSpacing: "-0.01em", textDecoration: "none", color: "inherit" },
   nav: { display: "flex", gap: "1.5rem", alignItems: "center" },
@@ -639,16 +675,12 @@ const s: Record<string, React.CSSProperties> = {
     flex: 1, padding: "0.6rem", borderRadius: 8, border: "none",
     fontSize: "0.9375rem", fontWeight: 700, cursor: "pointer",
   },
-  completionCard: {
-    background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 12,
-    padding: "2.5rem 1.5rem", display: "flex", flexDirection: "column",
-    alignItems: "center", gap: "1rem", textAlign: "center",
+  ratedLabel: {
+    flex: 1, padding: "0.6rem", borderRadius: 8, fontSize: "0.9375rem",
+    fontWeight: 700, textAlign: "center" as const,
   },
-  completionHeading: { fontSize: "1.375rem", fontWeight: 700, margin: 0 },
-  completionSub: { fontSize: "0.9375rem", color: "#6b7280", margin: 0 },
-  completionActions: { display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", marginTop: "0.5rem" },
-  retryBtn: {
-    width: "100%", padding: "0.75rem", borderRadius: 10, border: "none",
-    background: "#1a1a1a", color: "#fff", fontSize: "1rem", fontWeight: 700, cursor: "pointer",
+  nextBtn: {
+    flex: 1, padding: "0.6rem", borderRadius: 8, border: "1.5px solid #1a1a1a",
+    background: "#1a1a1a", color: "#fff", fontSize: "0.9375rem", fontWeight: 700, cursor: "pointer",
   },
 };
