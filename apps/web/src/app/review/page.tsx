@@ -4,6 +4,8 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { MarkdownContent } from "@/lib/MarkdownContent";
+import { createDrill, isDone, rateFailed, ratePassed } from "@/lib/drillQueue";
+import type { DrillState } from "@/lib/drillQueue";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
@@ -215,18 +217,17 @@ function DrillView({
   getToken,
   config,
   onExit,
+  seedIds,
 }: {
   getToken: () => Promise<string | null>;
   config: DrillConfig;
   onExit: () => void;
+  seedIds?: string[];
 }) {
-  const [queue, setQueue] = useState<ArtifactItem[]>([]);
-  const [newCount, setNewCount] = useState(0);
-  const [reviewedCount, setReviewedCount] = useState(0);
-  const [cursor, setCursor] = useState(0);
-  const [doneThisRun, setDoneThisRun] = useState(0);
+  const [drill, setDrill] = useState<DrillState<ArtifactItem> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   const tokenRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -243,9 +244,10 @@ function DrillView({
         });
         if (!res.ok) throw new Error(`${res.status}`);
         const data: QueueResponse = await res.json();
-        setQueue(data.artifacts);
-        setNewCount(data.new_count);
-        setReviewedCount(data.reviewed_count);
+        const artifacts = seedIds
+          ? data.artifacts.filter((a) => seedIds.includes(a.id))
+          : data.artifacts;
+        setDrill(createDrill(artifacts));
       } catch {
         setError("Could not load drill queue");
       } finally {
@@ -253,7 +255,7 @@ function DrillView({
       }
     }
     load();
-  }, [getToken, config]);
+  }, [getToken, config, seedIds]);
 
   async function recordEvent(artifactId: string, outcome: "passed" | "failed") {
     const token = tokenRef.current;
@@ -267,12 +269,15 @@ function DrillView({
     });
   }
 
-  function advance(outcome: "passed" | "failed") {
-    const artifact = queue[cursor % queue.length];
-    if (artifact) recordEvent(artifact.id, outcome);
-    setDoneThisRun((n) => n + 1);
-    setCursor((c) => c + 1);
-    if (newCount > 0) setNewCount((n) => Math.max(0, n - 1));
+  function rate(outcome: "passed" | "failed") {
+    setDrill((prev) => {
+      if (!prev) return prev;
+      const current = prev.queue[0];
+      if (current) recordEvent(current.id, outcome);
+      const next = outcome === "passed" ? ratePassed(prev) : rateFailed(prev);
+      if (isDone(next)) setDone(true);
+      return next;
+    });
   }
 
   if (loading) {
@@ -293,7 +298,7 @@ function DrillView({
     );
   }
 
-  if (queue.length === 0) {
+  if (!drill || drill.total === 0) {
     return (
       <div style={s.shell}>
         <Header active="review" />
@@ -305,7 +310,18 @@ function DrillView({
     );
   }
 
-  const artifact = queue[cursor % queue.length]!;
+  if (done) {
+    return (
+      <DrillComplete
+        drill={drill}
+        config={config}
+        getToken={getToken}
+        onExit={onExit}
+      />
+    );
+  }
+
+  const artifact = drill.queue[0]!;
 
   return (
     <div style={s.shell}>
@@ -313,9 +329,73 @@ function DrillView({
       <main style={s.main}>
         <div style={s.drillHeader}>
           <button type="button" style={s.exitBtn} onClick={onExit}>← Exit</button>
-          <span style={s.progress}>{doneThisRun} reviewed · {newCount} new</span>
+          <span style={s.progress}>{drill.learned.size} / {drill.total} learned</span>
         </div>
-        <ArtifactCard artifact={artifact} onRate={advance} />
+        <ArtifactCard artifact={artifact} onRate={rate} />
+      </main>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Completion screen
+// ---------------------------------------------------------------------------
+
+function DrillComplete({
+  drill,
+  config,
+  getToken,
+  onExit,
+}: {
+  drill: DrillState<ArtifactItem>;
+  config: DrillConfig;
+  getToken: () => Promise<string | null>;
+  onExit: () => void;
+}) {
+  const [retrying, setRetrying] = useState(false);
+  const weakCount = drill.weakSpots.size;
+  const weakIds = [...drill.weakSpots];
+
+  if (retrying) {
+    return (
+      <DrillView
+        getToken={getToken}
+        config={config}
+        onExit={onExit}
+        seedIds={weakIds}
+      />
+    );
+  }
+
+  return (
+    <div style={s.shell}>
+      <Header active="review" />
+      <main style={s.main}>
+        <div style={s.completionCard}>
+          <span style={{ fontSize: "2.5rem" }}>✓</span>
+          <h2 style={s.completionHeading}>
+            All {drill.total} artifact{drill.total !== 1 ? "s" : ""} learned
+          </h2>
+          {weakCount > 0 && (
+            <p style={s.completionSub}>
+              {weakCount} took multiple tries
+            </p>
+          )}
+          <div style={s.completionActions}>
+            {weakCount > 0 && (
+              <button
+                type="button"
+                style={s.retryBtn}
+                onClick={() => setRetrying(true)}
+              >
+                Retry {weakCount} weak spot{weakCount !== 1 ? "s" : ""}
+              </button>
+            )}
+            <button type="button" style={s.exitBtn} onClick={onExit}>
+              Exit
+            </button>
+          </div>
+        </div>
       </main>
     </div>
   );
@@ -464,9 +544,14 @@ function NoteCard({
       <span style={s.typeBadge}>Note</span>
       {title && <p style={{ ...s.cardBody, fontWeight: 700 }}>{title}</p>}
       {body && <MarkdownContent>{body}</MarkdownContent>}
-      <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534", alignSelf: "flex-start" }} onClick={() => onRate("passed")}>
-        Got it
-      </button>
+      <div style={s.rateRow}>
+        <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534" }} onClick={() => onRate("passed")}>
+          Got it
+        </button>
+        <button type="button" style={{ ...s.rateBtn, background: "#fee2e2", color: "#991b1b" }} onClick={() => onRate("failed")}>
+          Not yet
+        </button>
+      </div>
     </div>
   );
 }
@@ -553,5 +638,17 @@ const s: Record<string, React.CSSProperties> = {
   rateBtn: {
     flex: 1, padding: "0.6rem", borderRadius: 8, border: "none",
     fontSize: "0.9375rem", fontWeight: 700, cursor: "pointer",
+  },
+  completionCard: {
+    background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 12,
+    padding: "2.5rem 1.5rem", display: "flex", flexDirection: "column",
+    alignItems: "center", gap: "1rem", textAlign: "center",
+  },
+  completionHeading: { fontSize: "1.375rem", fontWeight: 700, margin: 0 },
+  completionSub: { fontSize: "0.9375rem", color: "#6b7280", margin: 0 },
+  completionActions: { display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", marginTop: "0.5rem" },
+  retryBtn: {
+    width: "100%", padding: "0.75rem", borderRadius: 10, border: "none",
+    background: "#1a1a1a", color: "#fff", fontSize: "1rem", fontWeight: 700, cursor: "pointer",
   },
 };
