@@ -26,6 +26,14 @@ export const ArtifactOutSchema = {
         source_text: {
             type: 'string',
             title: 'Source Text'
+        },
+        tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Tags',
+            default: []
         }
     },
     type: 'object',
@@ -128,6 +136,19 @@ export const FlashcardTransformResponseSchema = {
         source_summary: {
             type: 'string',
             title: 'Source Summary'
+        },
+        suggested_tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Suggested Tags',
+            default: []
+        },
+        artifact_id: {
+            type: 'string',
+            title: 'Artifact Id',
+            default: ''
         }
     },
     type: 'object',
@@ -170,6 +191,19 @@ export const NoteTransformResponseSchema = {
             },
             type: 'array',
             title: 'Key Points'
+        },
+        suggested_tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Suggested Tags',
+            default: []
+        },
+        artifact_id: {
+            type: 'string',
+            title: 'Artifact Id',
+            default: ''
         }
     },
     type: 'object',
@@ -218,6 +252,19 @@ export const QuizTransformResponseSchema = {
             },
             type: 'array',
             title: 'Questions'
+        },
+        suggested_tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Suggested Tags',
+            default: []
+        },
+        artifact_id: {
+            type: 'string',
+            title: 'Artifact Id',
+            default: ''
         }
     },
     type: 'object',
@@ -262,25 +309,21 @@ export const SuggestTagsResponseSchema = {
 
 export const TagOutSchema = {
     properties: {
-        id: {
-            type: 'string',
-            title: 'Id'
-        },
         name: {
             type: 'string',
             title: 'Name'
         },
-        color: {
+        bg: {
             type: 'string',
-            title: 'Color'
+            title: 'Bg'
         },
-        mastery_score: {
-            type: 'number',
-            title: 'Mastery Score'
+        text: {
+            type: 'string',
+            title: 'Text'
         }
     },
     type: 'object',
-    required: ['id', 'name', 'color', 'mastery_score'],
+    required: ['name', 'bg', 'text'],
     title: 'TagOut'
 } as const;
 
@@ -307,6 +350,17 @@ export const TransformRequestSchema = {
                 }
             ],
             title: 'Skill Name'
+        },
+        source_artifact_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Artifact Id'
         }
     },
     type: 'object',

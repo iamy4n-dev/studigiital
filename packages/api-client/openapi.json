@@ -331,6 +331,7 @@
                 "items": {
                   "type": "string"
                 },
+                "minItems": 1,
                 "title": "Tag Names"
               }
             }
@@ -895,6 +896,17 @@
               }
             ],
             "title": "Skill Name"
+          },
+          "source_artifact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Artifact Id"
           }
         },
         "type": "object",

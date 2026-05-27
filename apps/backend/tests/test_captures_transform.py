@@ -205,7 +205,7 @@ async def test_transform_with_skill_name_override_skips_infer() -> None:
         )
 
     assert response.status_code == 200
-    assert direct_backend.call_structured.call_count == 2  # generate + suggest_tags (no infer)  # type: ignore[attr-defined]
+    assert direct_backend.call_structured.call_count == 2  # type: ignore[attr-defined]
     assert response.json()["skill_name"] == "generate_flashcard"
 
 
@@ -272,11 +272,13 @@ async def test_transform_with_source_artifact_id_inherits_committed_tags() -> No
     assert response.status_code == 200
     body = response.json()
     assert body["suggested_tags"] == ["biology", "photosynthesis"]
-    assert derivation_backend.call_structured.call_count == 2  # infer + generate only, no suggest_tags  # type: ignore[attr-defined]
+    assert derivation_backend.call_structured.call_count == 2  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio
-async def test_transform_with_invalid_source_artifact_id_returns_404(mock_backend: LLMBackend) -> None:
+async def test_transform_with_invalid_source_artifact_id_returns_404(
+    mock_backend: LLMBackend,
+) -> None:
     mock_session = _make_mock_session()
     result_row = MagicMock()
     result_row.one_or_none.return_value = None

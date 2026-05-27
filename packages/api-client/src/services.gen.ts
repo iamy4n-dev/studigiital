@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { SuggestTagsApiV1CapturesSuggestTagsPostData, SuggestTagsApiV1CapturesSuggestTagsPostResponse, TransformCaptureApiV1CapturesTransformPostData, TransformCaptureApiV1CapturesTransformPostResponse, ListCapturesApiV1CapturesGetResponse, CreateCaptureApiV1CapturesPostData, CreateCaptureApiV1CapturesPostResponse, GetCaptureApiV1CapturesCaptureIdGetData, GetCaptureApiV1CapturesCaptureIdGetResponse, ListArtifactsApiV1ArtifactsGetResponse, GetArtifactApiV1ArtifactsArtifactIdGetData, GetArtifactApiV1ArtifactsArtifactIdGetResponse, ListTagsApiV1TagsGetResponse, GetTagApiV1TagsTagIdGetData, GetTagApiV1TagsTagIdGetResponse, GetMeApiV1UsersMeGetResponse, GetProfileApiV1UsersProfileGetResponse, CreateProfileApiV1UsersProfilePostData, CreateProfileApiV1UsersProfilePostResponse, HealthHealthGetResponse } from './types.gen';
+import type { SuggestTagsApiV1CapturesSuggestTagsPostData, SuggestTagsApiV1CapturesSuggestTagsPostResponse, TransformCaptureApiV1CapturesTransformPostData, TransformCaptureApiV1CapturesTransformPostResponse, ListCapturesApiV1CapturesGetResponse, CreateCaptureApiV1CapturesPostData, CreateCaptureApiV1CapturesPostResponse, GetCaptureApiV1CapturesCaptureIdGetData, GetCaptureApiV1CapturesCaptureIdGetResponse, ListArtifactsApiV1ArtifactsGetResponse, GetArtifactApiV1ArtifactsArtifactIdGetData, GetArtifactApiV1ArtifactsArtifactIdGetResponse, SetArtifactTagsApiV1ArtifactsArtifactIdTagsPutData, SetArtifactTagsApiV1ArtifactsArtifactIdTagsPutResponse, ListTagsApiV1TagsGetResponse, GetMeApiV1UsersMeGetResponse, GetProfileApiV1UsersProfileGetResponse, CreateProfileApiV1UsersProfilePostData, CreateProfileApiV1UsersProfilePostResponse, HealthHealthGetResponse } from './types.gen';
 
 /**
  * Suggest Tags
@@ -127,6 +127,29 @@ export const getArtifactApiV1ArtifactsArtifactIdGet = (data: GetArtifactApiV1Art
 };
 
 /**
+ * Set Artifact Tags
+ * @param data The data for the request.
+ * @param data.artifactId
+ * @param data.requestBody
+ * @returns ArtifactOut Successful Response
+ * @throws ApiError
+ */
+export const setArtifactTagsApiV1ArtifactsArtifactIdTagsPut = (data: SetArtifactTagsApiV1ArtifactsArtifactIdTagsPutData): CancelablePromise<SetArtifactTagsApiV1ArtifactsArtifactIdTagsPutResponse> => {
+    return __request(OpenAPI, {
+        method: 'PUT',
+        url: '/api/v1/artifacts/{artifact_id}/tags',
+        path: {
+            artifact_id: data.artifactId
+        },
+        body: data.requestBody,
+        mediaType: 'application/json',
+        errors: {
+            422: 'Validation Error'
+        }
+    });
+};
+
+/**
  * List Tags
  * @returns TagOut Successful Response
  * @throws ApiError
@@ -135,26 +158,6 @@ export const listTagsApiV1TagsGet = (): CancelablePromise<ListTagsApiV1TagsGetRe
     return __request(OpenAPI, {
         method: 'GET',
         url: '/api/v1/tags/'
-    });
-};
-
-/**
- * Get Tag
- * @param data The data for the request.
- * @param data.tagId
- * @returns TagOut Successful Response
- * @throws ApiError
- */
-export const getTagApiV1TagsTagIdGet = (data: GetTagApiV1TagsTagIdGetData): CancelablePromise<GetTagApiV1TagsTagIdGetResponse> => {
-    return __request(OpenAPI, {
-        method: 'GET',
-        url: '/api/v1/tags/{tag_id}',
-        path: {
-            tag_id: data.tagId
-        },
-        errors: {
-            422: 'Validation Error'
-        }
     });
 };
 

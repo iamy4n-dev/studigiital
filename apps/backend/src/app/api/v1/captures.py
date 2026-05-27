@@ -156,7 +156,8 @@ async def transform_capture(
         if source_result is None:
             raise HTTPException(status_code=404, detail="Source artifact not found")
         source_artifact, _ = source_result
-        result.suggested_tags = source_artifact.tags if isinstance(source_artifact.tags, list) else []
+        tags = source_artifact.tags
+        result.suggested_tags = tags if isinstance(tags, list) else []
     else:
         tags_skill = SuggestTagsSkill(backend, settings.llm_model_infer)
         tags_out = await tags_skill.run(SuggestTagsInput(text=payload.text))

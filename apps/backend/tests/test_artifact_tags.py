@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, call
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -78,7 +78,9 @@ async def test_set_artifact_tags_persists_tags(mock_session: AsyncSession) -> No
     assert mock_session.commit.called
 
 
-async def test_set_artifact_tags_returns_404_for_unknown_artifact(mock_session: AsyncSession) -> None:
+async def test_set_artifact_tags_returns_404_for_unknown_artifact(
+    mock_session: AsyncSession,
+) -> None:
     result_row = MagicMock()
     result_row.one_or_none.return_value = None
     mock_session.execute = AsyncMock(return_value=result_row)
