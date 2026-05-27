@@ -183,7 +183,7 @@ async def transform_capture(
     session.add(artifact)
     await session.flush()
 
-    if skill_name == "generate_flashcard" and hasattr(result, "cards"):
+    if isinstance(result, FlashcardTransformResponse):
         for i, card in enumerate(result.cards):
             session.add(ArtifactItem(
                 id=str(uuid.uuid4()),
@@ -192,7 +192,7 @@ async def transform_capture(
                 content={"front": card.front, "back": card.back},
                 position=i,
             ))
-    elif skill_name == "generate_quiz" and hasattr(result, "questions"):
+    elif isinstance(result, QuizTransformResponse):
         for i, q in enumerate(result.questions):
             session.add(ArtifactItem(
                 id=str(uuid.uuid4()),
@@ -206,7 +206,7 @@ async def transform_capture(
                 },
                 position=i,
             ))
-    elif skill_name == "generate_note" and hasattr(result, "body_markdown"):
+    elif isinstance(result, NoteTransformResponse):
         session.add(ArtifactItem(
             id=str(uuid.uuid4()),
             artifact_id=artifact_id,
