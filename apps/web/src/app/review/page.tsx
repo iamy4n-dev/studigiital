@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { MarkdownContent } from "@/lib/MarkdownContent";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
@@ -462,7 +463,7 @@ function NoteCard({
     <div style={s.card}>
       <span style={s.typeBadge}>Note</span>
       {title && <p style={{ ...s.cardBody, fontWeight: 700 }}>{title}</p>}
-      {body && <p style={{ ...s.cardBody, color: "#6b7280" }}>{body}</p>}
+      {body && <MarkdownContent>{body}</MarkdownContent>}
       <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534", alignSelf: "flex-start" }} onClick={() => onRate("passed")}>
         Got it
       </button>
