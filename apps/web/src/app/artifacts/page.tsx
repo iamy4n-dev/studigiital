@@ -69,9 +69,9 @@ function ArtifactList({ getToken }: { getToken: () => Promise<string | null> }) 
 
         {artifacts !== null && artifacts.length === 0 && (
           <div style={styles.empty}>
-            <p>No artifacts yet.</p>
+            <p>Nothing here yet.</p>
             <Link href="/capture" style={styles.ctaLink}>
-              Capture something →
+              Capture your first note →
             </Link>
           </div>
         )}
