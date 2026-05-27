@@ -2,6 +2,7 @@
 
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { useEffect, useRef, useState } from "react";
+import { mapErrorMessage } from "@/lib/errors";
 import type { FlashcardPair, QuizQuestion, TransformResult } from "@/lib/transform";
 import { MarkdownContent } from "@/lib/MarkdownContent";
 
@@ -51,18 +52,14 @@ function CaptureShell({
       });
 
       if (!res.ok) {
-        const err = await res.text();
-        setPhase({ status: "error", message: `Server error ${res.status}: ${err}` });
+        setPhase({ status: "error", message: mapErrorMessage(res.status) });
         return;
       }
 
       const data: TransformResult = await res.json();
       setPhase({ status: "result", data });
-    } catch (err) {
-      setPhase({
-        status: "error",
-        message: err instanceof Error ? err.message : "Something went wrong",
-      });
+    } catch {
+      setPhase({ status: "error", message: mapErrorMessage(0) });
     }
   }
 
@@ -198,6 +195,12 @@ function ResultView({ data, onReset }: { data: TransformResult; onReset: () => v
           ))}
         </>
       )}
+      <p style={styles.savedNotice}>
+        Saved to history ·{" "}
+        <a href="/artifacts" style={styles.savedLink}>
+          View all →
+        </a>
+      </p>
       <button style={styles.button} onClick={onReset}>
         Capture another →
       </button>
@@ -400,6 +403,15 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid #ddd",
     borderRadius: 6,
     padding: "0.2rem 0.6rem",
+  },
+  savedNotice: {
+    fontSize: "0.8125rem",
+    color: "#aaa",
+  },
+  savedLink: {
+    color: "#aaa",
+    textDecoration: "underline",
+    textUnderlineOffset: "2px",
   },
   summary: {
     fontSize: "0.875rem",

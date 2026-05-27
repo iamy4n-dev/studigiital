@@ -36,6 +36,9 @@ jobs:
           NEXT_PUBLIC_DEV_MODE: "true"
           NEXT_PUBLIC_API_URL: "http://localhost:8000"
 
+      - name: Test web
+        run: pnpm --filter @studigiital/web test
+
 
   api-contract:
     name: API contract (stale check)
