@@ -224,37 +224,6 @@ function TransformingView() {
 
 type ApiTagOut = { name: string; bg: string; text: string };
 
-function TagPill({
-  tag,
-  active,
-  onClick,
-}: {
-  tag: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  const { bg, text } = tagColors(tag);
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        fontSize: "0.8125rem",
-        fontWeight: 600,
-        padding: "0.25rem 0.625rem",
-        borderRadius: 999,
-        border: active ? "2px solid transparent" : "1.5px solid #e5e7eb",
-        background: active ? bg : "#fff",
-        color: active ? text : "#9ca3af",
-        cursor: "pointer",
-        transition: "all 0.12s",
-      }}
-    >
-      {tag}
-    </button>
-  );
-}
-
 function TagConfirm({
   suggestions,
   artifactId,
@@ -265,7 +234,8 @@ function TagConfirm({
   getToken: () => Promise<string | null>;
 }) {
   const [existingTags, setExistingTags] = useState<ApiTagOut[]>([]);
-  const [selected, setSelected] = useState<Set<string>>(new Set(suggestions));
+  // tags = the confirmed working list; pre-seeded from suggestions
+  const [tags, setTags] = useState<string[]>(suggestions);
   const [newTag, setNewTag] = useState("");
   const [saved, setSaved] = useState(false);
 
@@ -284,19 +254,18 @@ function TagConfirm({
     fetchExisting();
   }, [getToken]);
 
-  function toggle(tag: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(tag)) next.delete(tag);
-      else next.add(tag);
-      return next;
-    });
+  function addTag(name: string) {
+    const clean = name.trim().toLowerCase();
+    if (!clean || tags.includes(clean)) return;
+    setTags((prev) => [...prev, clean]);
   }
 
-  function addNewTag() {
-    const trimmed = newTag.trim().toLowerCase();
-    if (!trimmed) return;
-    toggle(trimmed);
+  function removeTag(name: string) {
+    setTags((prev) => prev.filter((t) => t !== name));
+  }
+
+  function handleInput() {
+    addTag(newTag);
     setNewTag("");
   }
 
@@ -309,7 +278,7 @@ function TagConfirm({
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify([...selected]),
+        body: JSON.stringify(tags),
       });
       setSaved(true);
     } catch {
@@ -320,7 +289,7 @@ function TagConfirm({
   if (saved) {
     return (
       <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
-        {[...selected].map((tag) => {
+        {tags.map((tag) => {
           const { bg, text } = tagColors(tag);
           return (
             <span
@@ -342,52 +311,76 @@ function TagConfirm({
     );
   }
 
-  const otherExisting = existingTags.filter((t) => !suggestions.includes(t.name));
+  const pickable = existingTags.filter((t) => !tags.includes(t.name));
 
   return (
     <div style={styles.tagConfirmContainer}>
-      {suggestions.length > 0 && (
-        <>
-          <p style={styles.tagConfirmLabel}>Suggested</p>
-          <div style={styles.tagConfirmRow}>
-            {suggestions.map((tag) => (
-              <TagPill key={tag} tag={tag} active={selected.has(tag)} onClick={() => toggle(tag)} />
-            ))}
-          </div>
-        </>
-      )}
+      <p style={styles.tagConfirmLabel}>Tags</p>
 
-      {otherExisting.length > 0 && (
-        <>
-          <p style={styles.tagConfirmLabel}>Your tags</p>
-          <div style={styles.tagConfirmRow}>
-            {otherExisting.map(({ name }) => (
-              <TagPill key={name} tag={name} active={selected.has(name)} onClick={() => toggle(name)} />
-            ))}
-          </div>
-        </>
-      )}
+      {/* Working list — suggested + user-added, each removable */}
+      <div style={styles.tagConfirmRow}>
+        {tags.map((tag) => {
+          const { bg, text } = tagColors(tag);
+          return (
+            <span
+              key={tag}
+              style={{ ...styles.tagChip, background: bg, color: text }}
+            >
+              {tag}
+              <button
+                type="button"
+                aria-label={`Remove ${tag}`}
+                onClick={() => removeTag(tag)}
+                style={{ ...styles.tagChipRemove, color: text }}
+              >
+                ×
+              </button>
+            </span>
+          );
+        })}
+        {tags.length === 0 && (
+          <span style={styles.tagEmptyHint}>No tags yet — add one below</span>
+        )}
+      </div>
 
+      {/* Free-text input to add a new tag */}
       <div style={styles.tagInputRow}>
         <input
           style={styles.tagInput}
           value={newTag}
           onChange={(e) => setNewTag(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addNewTag())}
-          placeholder="New tag…"
+          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleInput())}
+          placeholder="Add tag…"
         />
         {newTag.trim() && (
-          <button type="button" style={styles.tagAddButton} onClick={addNewTag}>
+          <button type="button" style={styles.tagAddButton} onClick={handleInput}>
             Add
           </button>
         )}
       </div>
 
-      {selected.size > 0 && (
-        <button type="button" style={styles.tagSaveButton} onClick={save}>
-          Save {selected.size} tag{selected.size !== 1 ? "s" : ""} →
-        </button>
+      {/* Existing tags palette — click to add to the list */}
+      {pickable.length > 0 && (
+        <>
+          <p style={styles.tagConfirmLabel}>Your tags</p>
+          <div style={styles.tagConfirmRow}>
+            {pickable.map(({ name, bg, text }) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => addTag(name)}
+                style={{ ...styles.tagPickable, borderColor: bg, color: text }}
+              >
+                + {name}
+              </button>
+            ))}
+          </div>
+        </>
       )}
+
+      <button type="button" style={styles.tagSaveButton} onClick={save}>
+        {tags.length > 0 ? `Save ${tags.length} tag${tags.length !== 1 ? "s" : ""} →` : "Save →"}
+      </button>
     </div>
   );
 }
@@ -766,6 +759,40 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     gap: "0.375rem",
     flexWrap: "wrap" as const,
+    alignItems: "center",
+  },
+  tagChip: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "0.25rem",
+    fontSize: "0.8125rem",
+    fontWeight: 600,
+    padding: "0.2rem 0.375rem 0.2rem 0.625rem",
+    borderRadius: 999,
+  },
+  tagChipRemove: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "1rem",
+    lineHeight: 1,
+    padding: 0,
+    opacity: 0.65,
+    fontWeight: 400,
+  },
+  tagEmptyHint: {
+    fontSize: "0.8125rem",
+    color: "#9ca3af",
+    fontStyle: "italic" as const,
+  },
+  tagPickable: {
+    fontSize: "0.8125rem",
+    fontWeight: 600,
+    padding: "0.2rem 0.6rem",
+    borderRadius: 999,
+    border: "1.5px solid",
+    background: "#fff",
+    cursor: "pointer",
   },
   tagInputRow: {
     display: "flex",
