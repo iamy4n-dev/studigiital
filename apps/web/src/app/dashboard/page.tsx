@@ -173,7 +173,7 @@ function ArtifactRow({ artifact }: { artifact: ArtifactOut }) {
     : null;
 
   return (
-    <div style={styles.row}>
+    <div style={styles.row} title={artifact.source_text || undefined}>
       <div style={styles.rowMain}>
         <span style={{ ...styles.badge, background: BADGE_COLORS[artifact.artifact_type] ?? "#eee" }}>
           {badge}
