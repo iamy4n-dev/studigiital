@@ -1,10 +1,14 @@
 "use client";
 
 import { useAuth, UserButton } from "@clerk/nextjs";
-import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { mapErrorMessage } from "@/lib/errors";
+import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/skills";
 import type { FlashcardPair, QuizQuestion, TransformResult } from "@/lib/transform";
 import { MarkdownContent } from "@/lib/MarkdownContent";
+
+type SkillChoice = "auto" | SkillName;
 
 type Phase =
   | { status: "idle" }
@@ -16,39 +20,61 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 export default function CapturePage() {
-  return DEV_MODE ? <CaptureShell getToken={async () => null} showUser={false} /> : <AuthCapturePage />;
+  return (
+    <Suspense fallback={null}>
+      <CaptureEntry />
+    </Suspense>
+  );
 }
 
-function AuthCapturePage() {
+function CaptureEntry() {
+  const searchParams = useSearchParams();
+  const initialText = searchParams.get("text") ?? "";
+  const rawSkill = searchParams.get("skill");
+  const initialSkill: SkillChoice = (SKILL_NAMES as readonly string[]).includes(rawSkill ?? "")
+    ? (rawSkill as SkillName)
+    : "auto";
+
+  return DEV_MODE ? (
+    <CaptureShell getToken={async () => null} showUser={false} initialText={initialText} initialSkill={initialSkill} />
+  ) : (
+    <AuthCapturePage initialText={initialText} initialSkill={initialSkill} />
+  );
+}
+
+function AuthCapturePage({ initialText, initialSkill }: { initialText: string; initialSkill: SkillChoice }) {
   const { getToken } = useAuth();
-  return <CaptureShell getToken={getToken} showUser />;
+  return <CaptureShell getToken={getToken} showUser initialText={initialText} initialSkill={initialSkill} />;
 }
 
 function CaptureShell({
   getToken,
   showUser,
+  initialText,
+  initialSkill,
 }: {
   getToken: () => Promise<string | null>;
   showUser: boolean;
+  initialText: string;
+  initialSkill: SkillChoice;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
+  const [skill, setSkill] = useState<SkillChoice>(initialSkill);
   const [phase, setPhase] = useState<Phase>({ status: "idle" });
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!text.trim()) return;
-
+  async function runTransform(submitText: string, submitSkill: SkillChoice) {
     setPhase({ status: "submitting" });
-
     try {
       const token = await getToken();
+      const body: Record<string, string> = { text: submitText.trim(), tier: "free" };
+      if (submitSkill !== "auto") body.skill_name = submitSkill;
       const res = await fetch(`${API_URL}/api/v1/captures/transform`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ text: text.trim(), tier: "free" }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -63,8 +89,20 @@ function CaptureShell({
     }
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return;
+    runTransform(text, skill);
+  }
+
+  function handleAlsoMake(chosenSkill: SkillName) {
+    setSkill(chosenSkill);
+    runTransform(text, chosenSkill);
+  }
+
   function reset() {
     setText("");
+    setSkill("auto");
     setPhase({ status: "idle" });
   }
 
@@ -100,6 +138,7 @@ function CaptureShell({
               rows={4}
               autoFocus
             />
+            <SkillToggle selected={skill} onChange={setSkill} />
             <button
               type="submit"
               style={{ ...styles.button, opacity: !text.trim() ? 0.6 : 1 }}
@@ -111,11 +150,35 @@ function CaptureShell({
         ) : phase.status === "submitting" ? (
           <TransformingView />
         ) : phase.status === "result" ? (
-          <ResultView data={phase.data} onReset={reset} />
+          <ResultView data={phase.data} onReset={reset} onAlsoMake={handleAlsoMake} />
         ) : (
           <ErrorView message={phase.message} onReset={reset} />
         )}
       </main>
+    </div>
+  );
+}
+
+function SkillToggle({ selected, onChange }: { selected: SkillChoice; onChange: (s: SkillChoice) => void }) {
+  const options: { value: SkillChoice; label: string }[] = [
+    { value: "auto", label: "Auto" },
+    ...SKILL_NAMES.map((s) => ({ value: s as SkillChoice, label: SKILL_LABELS[s] })),
+  ];
+  return (
+    <div style={styles.toggleGroup} role="group" aria-label="Output format">
+      {options.map(({ value, label }) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => onChange(value)}
+          style={{
+            ...styles.toggleButton,
+            ...(selected === value ? styles.toggleButtonActive : {}),
+          }}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -155,7 +218,16 @@ function TransformingView() {
   );
 }
 
-function ResultView({ data, onReset }: { data: TransformResult; onReset: () => void }) {
+function ResultView({
+  data,
+  onReset,
+  onAlsoMake,
+}: {
+  data: TransformResult;
+  onReset: () => void;
+  onAlsoMake: (skill: SkillName) => void;
+}) {
+  const alsoMake = otherSkills(data.skill_name);
   return (
     <div style={styles.resultContainer}>
       {data.skill_name === "generate_flashcard" && (
@@ -201,6 +273,14 @@ function ResultView({ data, onReset }: { data: TransformResult; onReset: () => v
           View all →
         </a>
       </p>
+      <div style={styles.alsoMakeRow}>
+        <span style={styles.alsoMakeLabel}>Also make:</span>
+        {alsoMake.map((s) => (
+          <button key={s} style={styles.alsoMakeButton} onClick={() => onAlsoMake(s)}>
+            {SKILL_LABELS[s]}
+          </button>
+        ))}
+      </div>
       <button style={styles.button} onClick={onReset}>
         Capture another →
       </button>
@@ -322,6 +402,26 @@ const styles: Record<string, React.CSSProperties> = {
     outline: "none",
     background: "#fff",
   },
+  toggleGroup: {
+    display: "flex",
+    gap: "0.5rem",
+    flexWrap: "wrap" as const,
+  },
+  toggleButton: {
+    background: "#fff",
+    color: "#555",
+    border: "1.5px solid #ddd",
+    borderRadius: 8,
+    padding: "0.4rem 0.9rem",
+    fontSize: "0.875rem",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  toggleButtonActive: {
+    background: "#1a1a1a",
+    color: "#fff",
+    border: "1.5px solid #1a1a1a",
+  },
   button: {
     alignSelf: "flex-start",
     background: "#1a1a1a",
@@ -412,6 +512,27 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#aaa",
     textDecoration: "underline",
     textUnderlineOffset: "2px",
+  },
+  alsoMakeRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    flexWrap: "wrap" as const,
+  },
+  alsoMakeLabel: {
+    fontSize: "0.875rem",
+    color: "#888",
+    fontWeight: 500,
+  },
+  alsoMakeButton: {
+    background: "#fff",
+    color: "#1a1a1a",
+    border: "1.5px solid #ddd",
+    borderRadius: 8,
+    padding: "0.4rem 0.9rem",
+    fontSize: "0.875rem",
+    fontWeight: 600,
+    cursor: "pointer",
   },
   summary: {
     fontSize: "0.875rem",

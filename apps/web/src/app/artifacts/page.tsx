@@ -3,6 +3,8 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/skills";
+import { buildCaptureUrl } from "@/lib/captureUrl";
 
 interface ArtifactOut {
   id: string;
@@ -10,6 +12,7 @@ interface ArtifactOut {
   artifact_type: string;
   content: Record<string, unknown>;
   created_at: string;
+  source_text: string;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -98,6 +101,10 @@ function ArtifactCard({ artifact }: { artifact: ArtifactOut }) {
     minute: "2-digit",
   });
 
+  const rerunSkills = (SKILL_NAMES as readonly string[]).includes(artifact.artifact_type)
+    ? otherSkills(artifact.artifact_type as SkillName)
+    : null;
+
   return (
     <div style={styles.card}>
       <div style={styles.cardTop}>
@@ -107,6 +114,15 @@ function ArtifactCard({ artifact }: { artifact: ArtifactOut }) {
         <span style={styles.timestamp}>{date}</span>
       </div>
       <p style={styles.preview}>{preview}</p>
+      {rerunSkills && artifact.source_text && (
+        <div style={styles.rerunRow}>
+          {rerunSkills.map((s) => (
+            <a key={s} href={buildCaptureUrl(artifact.source_text, s)} style={styles.rerunLink}>
+              Make {SKILL_LABELS[s]} →
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -240,5 +256,17 @@ const styles: Record<string, React.CSSProperties> = {
     display: "-webkit-box",
     WebkitLineClamp: 2,
     WebkitBoxOrient: "vertical",
+  },
+  rerunRow: {
+    display: "flex",
+    gap: "0.75rem",
+    flexWrap: "wrap" as const,
+    paddingTop: "0.25rem",
+  },
+  rerunLink: {
+    fontSize: "0.8125rem",
+    fontWeight: 600,
+    color: "#6b7280",
+    textDecoration: "none",
   },
 };

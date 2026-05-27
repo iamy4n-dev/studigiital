@@ -22,10 +22,14 @@ export const ArtifactOutSchema = {
         created_at: {
             type: 'string',
             title: 'Created At'
+        },
+        source_text: {
+            type: 'string',
+            title: 'Source Text'
         }
     },
     type: 'object',
-    required: ['id', 'capture_id', 'artifact_type', 'content', 'created_at'],
+    required: ['id', 'capture_id', 'artifact_type', 'content', 'created_at', 'source_text'],
     title: 'ArtifactOut'
 } as const;
 
