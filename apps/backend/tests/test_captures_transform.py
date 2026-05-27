@@ -1,12 +1,23 @@
+from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import UserClaims, get_current_user
 from app.core.config import settings
+from app.core.db import get_session
 from app.core.llm import LLMBackend, get_llm_backend
 from app.main import app
+
+
+def _make_mock_session() -> AsyncSession:
+    session = MagicMock(spec=AsyncSession)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+    session.commit = AsyncMock()
+    return session
 
 
 def _make_backend(*side_effects: dict) -> LLMBackend:
@@ -33,10 +44,16 @@ def mock_backend() -> LLMBackend:
 
 @pytest.fixture(autouse=True)
 def override_deps(mock_backend: LLMBackend) -> None:
+    mock_session = _make_mock_session()
+
+    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
     app.dependency_overrides[get_current_user] = lambda: UserClaims(
         user_id="test-user", tier="free"
     )
     app.dependency_overrides[get_llm_backend] = lambda: mock_backend
+    app.dependency_overrides[get_session] = _session_override
     yield  # type: ignore[misc]
     app.dependency_overrides.clear()
 
