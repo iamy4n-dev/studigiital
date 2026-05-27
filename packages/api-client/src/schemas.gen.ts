@@ -107,6 +107,30 @@ export const FlashcardPairSchema = {
     title: 'FlashcardPair'
 } as const;
 
+export const FlashcardTransformResponseSchema = {
+    properties: {
+        skill_name: {
+            type: 'string',
+            const: 'generate_flashcard',
+            title: 'Skill Name'
+        },
+        cards: {
+            items: {
+                '$ref': '#/components/schemas/FlashcardPair'
+            },
+            type: 'array',
+            title: 'Cards'
+        },
+        source_summary: {
+            type: 'string',
+            title: 'Source Summary'
+        }
+    },
+    type: 'object',
+    required: ['skill_name', 'cards', 'source_summary'],
+    title: 'FlashcardTransformResponse'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -119,6 +143,82 @@ export const HTTPValidationErrorSchema = {
     },
     type: 'object',
     title: 'HTTPValidationError'
+} as const;
+
+export const NoteTransformResponseSchema = {
+    properties: {
+        skill_name: {
+            type: 'string',
+            const: 'generate_note',
+            title: 'Skill Name'
+        },
+        title: {
+            type: 'string',
+            title: 'Title'
+        },
+        body_markdown: {
+            type: 'string',
+            title: 'Body Markdown'
+        },
+        key_points: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Key Points'
+        }
+    },
+    type: 'object',
+    required: ['skill_name', 'title', 'body_markdown', 'key_points'],
+    title: 'NoteTransformResponse'
+} as const;
+
+export const QuizQuestionSchema = {
+    properties: {
+        stem: {
+            type: 'string',
+            title: 'Stem'
+        },
+        options: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            minItems: 2,
+            title: 'Options'
+        },
+        correct_index: {
+            type: 'integer',
+            title: 'Correct Index'
+        },
+        explanation: {
+            type: 'string',
+            title: 'Explanation'
+        }
+    },
+    type: 'object',
+    required: ['stem', 'options', 'correct_index', 'explanation'],
+    title: 'QuizQuestion'
+} as const;
+
+export const QuizTransformResponseSchema = {
+    properties: {
+        skill_name: {
+            type: 'string',
+            const: 'generate_quiz',
+            title: 'Skill Name'
+        },
+        questions: {
+            items: {
+                '$ref': '#/components/schemas/QuizQuestion'
+            },
+            type: 'array',
+            title: 'Questions'
+        }
+    },
+    type: 'object',
+    required: ['skill_name', 'questions'],
+    title: 'QuizTransformResponse'
 } as const;
 
 export const SuggestTagsRequestSchema = {
@@ -184,6 +284,7 @@ export const TransformRequestSchema = {
     properties: {
         text: {
             type: 'string',
+            minLength: 1,
             title: 'Text'
         },
         tier: {
@@ -191,34 +292,22 @@ export const TransformRequestSchema = {
             enum: ['free', 'paid'],
             title: 'Tier',
             default: 'free'
+        },
+        skill_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Skill Name'
         }
     },
     type: 'object',
     required: ['text'],
     title: 'TransformRequest'
-} as const;
-
-export const TransformResponseSchema = {
-    properties: {
-        skill_name: {
-            type: 'string',
-            title: 'Skill Name'
-        },
-        cards: {
-            items: {
-                '$ref': '#/components/schemas/FlashcardPair'
-            },
-            type: 'array',
-            title: 'Cards'
-        },
-        source_summary: {
-            type: 'string',
-            title: 'Source Summary'
-        }
-    },
-    type: 'object',
-    required: ['skill_name', 'cards', 'source_summary'],
-    title: 'TransformResponse'
 } as const;
 
 export const UserClaimsSchema = {

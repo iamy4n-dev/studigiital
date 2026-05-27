@@ -76,6 +76,9 @@ function CaptureShell({
       <header style={styles.header}>
         <span style={styles.logo}>Studigital</span>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <a href="/artifacts" style={styles.devLink}>
+            History
+          </a>
           {DEV_MODE && (
             <a href="/skill-test" style={styles.devLink}>
               Skill Tester

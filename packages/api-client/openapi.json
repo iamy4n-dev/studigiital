@@ -74,7 +74,26 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransformResponse"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/FlashcardTransformResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/NoteTransformResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/QuizTransformResponse"
+                    }
+                  ],
+                  "title": "Response Transform Capture Api V1 Captures Transform Post",
+                  "discriminator": {
+                    "propertyName": "skill_name",
+                    "mapping": {
+                      "generate_flashcard": "#/components/schemas/FlashcardTransformResponse",
+                      "generate_note": "#/components/schemas/NoteTransformResponse",
+                      "generate_quiz": "#/components/schemas/QuizTransformResponse"
+                    }
+                  }
                 }
               }
             }
@@ -203,6 +222,36 @@
         }
       }
     },
+    "/api/v1/artifacts/": {
+      "get": {
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "List Artifacts",
+        "operationId": "list_artifacts_api_v1_artifacts__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ArtifactOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Artifacts Api V1 Artifacts  Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/artifacts/{artifact_id}": {
       "get": {
         "tags": [
@@ -210,6 +259,11 @@
         ],
         "summary": "Get Artifact",
         "operationId": "get_artifact_api_v1_artifacts__artifact_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "artifact_id",
@@ -238,31 +292,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/artifacts/": {
-      "get": {
-        "tags": [
-          "artifacts"
-        ],
-        "summary": "List Artifacts",
-        "operationId": "list_artifacts_api_v1_artifacts__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ArtifactOut"
-                  },
-                  "type": "array",
-                  "title": "Response List Artifacts Api V1 Artifacts  Get"
                 }
               }
             }
@@ -578,6 +607,33 @@
         ],
         "title": "FlashcardPair"
       },
+      "FlashcardTransformResponse": {
+        "properties": {
+          "skill_name": {
+            "type": "string",
+            "const": "generate_flashcard",
+            "title": "Skill Name"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/FlashcardPair"
+            },
+            "type": "array",
+            "title": "Cards"
+          },
+          "source_summary": {
+            "type": "string",
+            "title": "Source Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "skill_name",
+          "cards",
+          "source_summary"
+        ],
+        "title": "FlashcardTransformResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -590,6 +646,92 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "NoteTransformResponse": {
+        "properties": {
+          "skill_name": {
+            "type": "string",
+            "const": "generate_note",
+            "title": "Skill Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body_markdown": {
+            "type": "string",
+            "title": "Body Markdown"
+          },
+          "key_points": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Key Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "skill_name",
+          "title",
+          "body_markdown",
+          "key_points"
+        ],
+        "title": "NoteTransformResponse"
+      },
+      "QuizQuestion": {
+        "properties": {
+          "stem": {
+            "type": "string",
+            "title": "Stem"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 2,
+            "title": "Options"
+          },
+          "correct_index": {
+            "type": "integer",
+            "title": "Correct Index"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stem",
+          "options",
+          "correct_index",
+          "explanation"
+        ],
+        "title": "QuizQuestion"
+      },
+      "QuizTransformResponse": {
+        "properties": {
+          "skill_name": {
+            "type": "string",
+            "const": "generate_quiz",
+            "title": "Skill Name"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuizQuestion"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "skill_name",
+          "questions"
+        ],
+        "title": "QuizTransformResponse"
       },
       "SuggestTagsRequest": {
         "properties": {
@@ -660,6 +802,7 @@
         "properties": {
           "text": {
             "type": "string",
+            "minLength": 1,
             "title": "Text"
           },
           "tier": {
@@ -670,6 +813,17 @@
             ],
             "title": "Tier",
             "default": "free"
+          },
+          "skill_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Name"
           }
         },
         "type": "object",
@@ -677,32 +831,6 @@
           "text"
         ],
         "title": "TransformRequest"
-      },
-      "TransformResponse": {
-        "properties": {
-          "skill_name": {
-            "type": "string",
-            "title": "Skill Name"
-          },
-          "cards": {
-            "items": {
-              "$ref": "#/components/schemas/FlashcardPair"
-            },
-            "type": "array",
-            "title": "Cards"
-          },
-          "source_summary": {
-            "type": "string",
-            "title": "Source Summary"
-          }
-        },
-        "type": "object",
-        "required": [
-          "skill_name",
-          "cards",
-          "source_summary"
-        ],
-        "title": "TransformResponse"
       },
       "UserClaims": {
         "properties": {

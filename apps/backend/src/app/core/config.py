@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     debug: bool = False
     database_url: str = "postgresql+asyncpg://localhost/studigital"
+    db_ssl: bool = False
     cors_origins: list[str] = ["http://localhost:3000"]
     aws_region: str = "us-east-1"
     s3_bucket: str = "studigiital-media"

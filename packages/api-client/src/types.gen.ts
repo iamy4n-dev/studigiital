@@ -29,8 +29,33 @@ export type FlashcardPair = {
     back: string;
 };
 
+export type FlashcardTransformResponse = {
+    skill_name: "generate_flashcard";
+    cards: Array<FlashcardPair>;
+    source_summary: string;
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
+};
+
+export type NoteTransformResponse = {
+    skill_name: "generate_note";
+    title: string;
+    body_markdown: string;
+    key_points: Array<(string)>;
+};
+
+export type QuizQuestion = {
+    stem: string;
+    options: Array<(string)>;
+    correct_index: number;
+    explanation: string;
+};
+
+export type QuizTransformResponse = {
+    skill_name: "generate_quiz";
+    questions: Array<QuizQuestion>;
 };
 
 export type SuggestTagsRequest = {
@@ -52,15 +77,10 @@ export type TagOut = {
 export type TransformRequest = {
     text: string;
     tier?: 'free' | 'paid';
+    skill_name?: (string | null);
 };
 
 export type tier = 'free' | 'paid';
-
-export type TransformResponse = {
-    skill_name: string;
-    cards: Array<FlashcardPair>;
-    source_summary: string;
-};
 
 export type UserClaims = {
     user_id: string;
@@ -98,7 +118,7 @@ export type TransformCaptureApiV1CapturesTransformPostData = {
     requestBody: TransformRequest;
 };
 
-export type TransformCaptureApiV1CapturesTransformPostResponse = (TransformResponse);
+export type TransformCaptureApiV1CapturesTransformPostResponse = ((FlashcardTransformResponse | NoteTransformResponse | QuizTransformResponse));
 
 export type ListCapturesApiV1CapturesGetResponse = (Array<CaptureOut>);
 
@@ -114,13 +134,13 @@ export type GetCaptureApiV1CapturesCaptureIdGetData = {
 
 export type GetCaptureApiV1CapturesCaptureIdGetResponse = (CaptureOut);
 
+export type ListArtifactsApiV1ArtifactsGetResponse = (Array<ArtifactOut>);
+
 export type GetArtifactApiV1ArtifactsArtifactIdGetData = {
     artifactId: string;
 };
 
 export type GetArtifactApiV1ArtifactsArtifactIdGetResponse = (ArtifactOut);
-
-export type ListArtifactsApiV1ArtifactsGetResponse = (Array<ArtifactOut>);
 
 export type ListTagsApiV1TagsGetResponse = (Array<TagOut>);
 

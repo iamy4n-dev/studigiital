@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { SuggestTagsApiV1CapturesSuggestTagsPostData, SuggestTagsApiV1CapturesSuggestTagsPostResponse, TransformCaptureApiV1CapturesTransformPostData, TransformCaptureApiV1CapturesTransformPostResponse, ListCapturesApiV1CapturesGetResponse, CreateCaptureApiV1CapturesPostData, CreateCaptureApiV1CapturesPostResponse, GetCaptureApiV1CapturesCaptureIdGetData, GetCaptureApiV1CapturesCaptureIdGetResponse, GetArtifactApiV1ArtifactsArtifactIdGetData, GetArtifactApiV1ArtifactsArtifactIdGetResponse, ListArtifactsApiV1ArtifactsGetResponse, ListTagsApiV1TagsGetResponse, GetTagApiV1TagsTagIdGetData, GetTagApiV1TagsTagIdGetResponse, GetMeApiV1UsersMeGetResponse, GetProfileApiV1UsersProfileGetResponse, CreateProfileApiV1UsersProfilePostData, CreateProfileApiV1UsersProfilePostResponse, HealthHealthGetResponse } from './types.gen';
+import type { SuggestTagsApiV1CapturesSuggestTagsPostData, SuggestTagsApiV1CapturesSuggestTagsPostResponse, TransformCaptureApiV1CapturesTransformPostData, TransformCaptureApiV1CapturesTransformPostResponse, ListCapturesApiV1CapturesGetResponse, CreateCaptureApiV1CapturesPostData, CreateCaptureApiV1CapturesPostResponse, GetCaptureApiV1CapturesCaptureIdGetData, GetCaptureApiV1CapturesCaptureIdGetResponse, ListArtifactsApiV1ArtifactsGetResponse, GetArtifactApiV1ArtifactsArtifactIdGetData, GetArtifactApiV1ArtifactsArtifactIdGetResponse, ListTagsApiV1TagsGetResponse, GetTagApiV1TagsTagIdGetData, GetTagApiV1TagsTagIdGetResponse, GetMeApiV1UsersMeGetResponse, GetProfileApiV1UsersProfileGetResponse, CreateProfileApiV1UsersProfilePostData, CreateProfileApiV1UsersProfilePostResponse, HealthHealthGetResponse } from './types.gen';
 
 /**
  * Suggest Tags
@@ -28,7 +28,7 @@ export const suggestTagsApiV1CapturesSuggestTagsPost = (data: SuggestTagsApiV1Ca
  * Transform Capture
  * @param data The data for the request.
  * @param data.requestBody
- * @returns TransformResponse Successful Response
+ * @returns unknown Successful Response
  * @throws ApiError
  */
 export const transformCaptureApiV1CapturesTransformPost = (data: TransformCaptureApiV1CapturesTransformPostData): CancelablePromise<TransformCaptureApiV1CapturesTransformPostResponse> => {
@@ -95,6 +95,18 @@ export const getCaptureApiV1CapturesCaptureIdGet = (data: GetCaptureApiV1Capture
 };
 
 /**
+ * List Artifacts
+ * @returns ArtifactOut Successful Response
+ * @throws ApiError
+ */
+export const listArtifactsApiV1ArtifactsGet = (): CancelablePromise<ListArtifactsApiV1ArtifactsGetResponse> => {
+    return __request(OpenAPI, {
+        method: 'GET',
+        url: '/api/v1/artifacts/'
+    });
+};
+
+/**
  * Get Artifact
  * @param data The data for the request.
  * @param data.artifactId
@@ -111,18 +123,6 @@ export const getArtifactApiV1ArtifactsArtifactIdGet = (data: GetArtifactApiV1Art
         errors: {
             422: 'Validation Error'
         }
-    });
-};
-
-/**
- * List Artifacts
- * @returns ArtifactOut Successful Response
- * @throws ApiError
- */
-export const listArtifactsApiV1ArtifactsGet = (): CancelablePromise<ListArtifactsApiV1ArtifactsGetResponse> => {
-    return __request(OpenAPI, {
-        method: 'GET',
-        url: '/api/v1/artifacts/'
     });
 };
 
