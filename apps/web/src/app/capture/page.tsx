@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth, UserButton } from "@clerk/nextjs";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FlashcardPair, QuizQuestion, TransformResult } from "@/lib/transform";
 import { MarkdownContent } from "@/lib/MarkdownContent";
 
@@ -89,7 +89,7 @@ function CaptureShell({
       </header>
 
       <main style={styles.main}>
-        {phase.status === "idle" || phase.status === "submitting" ? (
+        {phase.status === "idle" ? (
           <form onSubmit={handleSubmit} style={styles.form}>
             <label style={styles.label} htmlFor="capture-text">
               What did you just learn or get wrong?
@@ -102,25 +102,58 @@ function CaptureShell({
               placeholder="e.g. I confused 'affect' and 'effect' again..."
               rows={4}
               autoFocus
-              disabled={phase.status === "submitting"}
             />
             <button
               type="submit"
-              style={{
-                ...styles.button,
-                opacity: phase.status === "submitting" || !text.trim() ? 0.6 : 1,
-              }}
-              disabled={phase.status === "submitting" || !text.trim()}
+              style={{ ...styles.button, opacity: !text.trim() ? 0.6 : 1 }}
+              disabled={!text.trim()}
             >
-              {phase.status === "submitting" ? "Transforming…" : "Transform →"}
+              Transform →
             </button>
           </form>
+        ) : phase.status === "submitting" ? (
+          <TransformingView />
         ) : phase.status === "result" ? (
           <ResultView data={phase.data} onReset={reset} />
         ) : (
           <ErrorView message={phase.message} onReset={reset} />
         )}
       </main>
+    </div>
+  );
+}
+
+const PROGRESS_MESSAGES = [
+  "Reading your text…",
+  "Figuring out the best format…",
+  "Building your learning artifact…",
+  "Almost there…",
+];
+const STEP_MS = [0, 2000, 5000, 9000];
+
+function TransformingView() {
+  const [msgIndex, setMsgIndex] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    function scheduleNext(index: number) {
+      const next = index + 1;
+      if (next >= STEP_MS.length) return;
+      timerRef.current = setTimeout(() => {
+        setMsgIndex(next);
+        scheduleNext(next);
+      }, STEP_MS[next]! - STEP_MS[index]!);
+    }
+    scheduleNext(0);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return (
+    <div style={styles.progressContainer}>
+      <div className="spinner" />
+      <p style={styles.progressMessage}>{PROGRESS_MESSAGES[msgIndex]}</p>
     </div>
   );
 }
@@ -296,6 +329,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "1rem",
     fontWeight: 600,
     cursor: "pointer",
+  },
+  progressContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "1.25rem",
+  },
+  progressMessage: {
+    fontSize: "1rem",
+    color: "#555",
+    fontWeight: 500,
   },
   resultContainer: {
     display: "flex",
