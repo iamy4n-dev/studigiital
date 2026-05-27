@@ -1,3 +1,10 @@
-import type { TransformResponse } from "@studigiital/api-client";
+import type {
+  FlashcardTransformResponse,
+  NoteTransformResponse,
+  QuizTransformResponse,
+} from "@studigiital/api-client";
 
-export type { TransformResponse };
+export type TransformResponse =
+  | FlashcardTransformResponse
+  | NoteTransformResponse
+  | QuizTransformResponse;
