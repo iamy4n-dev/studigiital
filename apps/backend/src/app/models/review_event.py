@@ -14,7 +14,7 @@ class ReviewEvent(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), index=True)
-    artifact_id: Mapped[str] = mapped_column(String(36), ForeignKey("artifacts.id"), index=True)
+    item_id: Mapped[str] = mapped_column(String(36), ForeignKey("artifact_items.id"), index=True)
     outcome: Mapped[str] = mapped_column(String(10))  # "passed" | "failed"
     reviewed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

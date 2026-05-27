@@ -15,16 +15,17 @@ interface TagOut {
   text: string;
 }
 
-interface ArtifactItem {
+interface DrillItem {
   id: string;
-  artifact_type: string;
+  artifact_id: string;
+  item_type: string;
   content: Record<string, unknown>;
   tags: string[];
   source_text: string;
 }
 
 interface QueueResponse {
-  artifacts: ArtifactItem[];
+  items: DrillItem[];
   new_count: number;
   reviewed_count: number;
 }
@@ -220,8 +221,8 @@ function DrillView({
   config: DrillConfig;
   onExit: () => void;
 }) {
-  const [originalQueue, setOriginalQueue] = useState<ArtifactItem[]>([]);
-  const [activeQueue, setActiveQueue] = useState<ArtifactItem[]>([]);
+  const [originalQueue, setOriginalQueue] = useState<DrillItem[]>([]);
+  const [activeQueue, setActiveQueue] = useState<DrillItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [learnedCount, setLearnedCount] = useState(0);
   const [weakSpots, setWeakSpots] = useState<Set<string>>(new Set());
@@ -244,9 +245,9 @@ function DrillView({
         });
         if (!res.ok) throw new Error(`${res.status}`);
         const data: QueueResponse = await res.json();
-        setOriginalQueue(data.artifacts);
-        setActiveQueue(data.artifacts);
-        setTotalCount(data.artifacts.length);
+        setOriginalQueue(data.items);
+        setActiveQueue(data.items);
+        setTotalCount(data.items.length);
       } catch {
         setError("Could not load drill queue");
       } finally {
@@ -256,7 +257,7 @@ function DrillView({
     load();
   }, [getToken, config]);
 
-  async function recordEvent(artifactId: string, outcome: "passed" | "failed") {
+  async function recordEvent(itemId: string, outcome: "passed" | "failed") {
     const token = tokenRef.current;
     await fetch(`${API_URL}/api/v1/review/events`, {
       method: "POST",
@@ -264,7 +265,7 @@ function DrillView({
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ artifact_id: artifactId, outcome }),
+      body: JSON.stringify({ item_id: itemId, outcome }),
     });
   }
 
@@ -351,7 +352,7 @@ function DrillView({
           <button type="button" style={s.exitBtn} onClick={onExit}>← Exit</button>
           <span style={s.progress}>{learnedCount} / {totalCount} learned</span>
         </div>
-        <ArtifactCard artifact={artifact} onRate={advance} />
+        <ArtifactCard item={artifact} onRate={advance} />
       </main>
     </div>
   );
@@ -413,42 +414,42 @@ function CompletionScreen({
 // ---------------------------------------------------------------------------
 
 function ArtifactCard({
-  artifact,
+  item,
   onRate,
 }: {
-  artifact: ArtifactItem;
+  item: DrillItem;
   onRate: (outcome: "passed" | "failed") => void;
 }) {
-  if (artifact.artifact_type === "generate_flashcard") {
-    return <FlashcardCard artifact={artifact} onRate={onRate} />;
+  if (item.item_type === "flashcard") {
+    return <FlashcardCard item={item} onRate={onRate} />;
   }
-  if (artifact.artifact_type === "generate_quiz") {
-    return <QuizCard artifact={artifact} onRate={onRate} />;
+  if (item.item_type === "quiz_question") {
+    return <QuizCard item={item} onRate={onRate} />;
   }
-  return <NoteCard artifact={artifact} onRate={onRate} />;
+  return <NoteCard item={item} onRate={onRate} />;
 }
 
 function FlashcardCard({
-  artifact,
+  item,
   onRate,
 }: {
-  artifact: ArtifactItem;
+  item: DrillItem;
   onRate: (outcome: "passed" | "failed") => void;
 }) {
   const [flipped, setFlipped] = useState(false);
   const [rated, setRated] = useState<"passed" | "failed" | null>(null);
-  const cards = artifact.content.cards as Array<{ front: string; back: string }> | undefined;
-  const card = cards?.[0];
+  const front = item.content.front as string | undefined;
+  const back = item.content.back as string | undefined;
 
-  const artifactId = artifact.id;
-  useEffect(() => { setFlipped(false); setRated(null); }, [artifactId]);
+  const itemId = item.id;
+  useEffect(() => { setFlipped(false); setRated(null); }, [itemId]);
 
-  if (!card) return null;
+  if (!front || !back) return null;
 
   return (
     <div style={s.card}>
       <span style={s.typeBadge}>Flashcard</span>
-      <p style={s.cardBody}>{flipped ? card.back : card.front}</p>
+      <p style={s.cardBody}>{flipped ? back : front}</p>
       {!flipped ? (
         <button type="button" style={s.flipBtn} onClick={() => setFlipped(true)}>
           Reveal answer
@@ -477,39 +478,36 @@ function FlashcardCard({
 }
 
 function QuizCard({
-  artifact,
+  item,
   onRate,
 }: {
-  artifact: ArtifactItem;
+  item: DrillItem;
   onRate: (outcome: "passed" | "failed") => void;
 }) {
   const [selected, setSelected] = useState<number | null>(null);
-  const questions = artifact.content.questions as Array<{
-    stem: string;
-    options: string[];
-    correct_index: number;
-    explanation: string;
-  }> | undefined;
-  const q = questions?.[0];
+  const stem = item.content.stem as string | undefined;
+  const options = item.content.options as string[] | undefined;
+  const correctIndex = item.content.correct_index as number | undefined;
+  const explanation = item.content.explanation as string | undefined;
 
-  const artifactId = artifact.id;
-  useEffect(() => setSelected(null), [artifactId]);
+  const itemId = item.id;
+  useEffect(() => setSelected(null), [itemId]);
 
-  if (!q) return null;
+  if (!stem || !options || correctIndex === undefined) return null;
 
   const answered = selected !== null;
-  const correct = selected === q.correct_index;
+  const correct = selected === correctIndex;
 
   return (
     <div style={s.card}>
       <span style={s.typeBadge}>Quiz</span>
-      <p style={s.cardBody}>{q.stem}</p>
+      <p style={s.cardBody}>{stem}</p>
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem" }}>
-        {q.options.map((opt, i) => {
+        {options.map((opt, i) => {
           let bg = "#f9fafb";
           let border = "#e5e7eb";
           if (answered) {
-            if (i === q.correct_index) { bg = "#dcfce7"; border = "#166534"; }
+            if (i === correctIndex) { bg = "#dcfce7"; border = "#166534"; }
             else if (i === selected) { bg = "#fee2e2"; border = "#991b1b"; }
           }
           return (
@@ -536,7 +534,7 @@ function QuizCard({
       {answered && (
         <>
           <p style={{ fontSize: "0.875rem", color: correct ? "#166534" : "#991b1b", margin: 0 }}>
-            {correct ? "Correct — " : "Not quite — "}{q.explanation}
+            {correct ? "Correct — " : "Not quite — "}{explanation}
           </p>
           <button type="button" style={s.nextBtn} onClick={() => onRate(correct ? "passed" : "failed")}>
             Next →
@@ -548,18 +546,18 @@ function QuizCard({
 }
 
 function NoteCard({
-  artifact,
+  item,
   onRate,
 }: {
-  artifact: ArtifactItem;
+  item: DrillItem;
   onRate: (outcome: "passed" | "failed") => void;
 }) {
   const [rated, setRated] = useState<"passed" | "failed" | null>(null);
-  const title = artifact.content.title as string | undefined;
-  const body = artifact.content.body_markdown as string | undefined;
+  const title = item.content.title as string | undefined;
+  const body = item.content.body_markdown as string | undefined;
 
-  const artifactId = artifact.id;
-  useEffect(() => setRated(null), [artifactId]);
+  const itemId = item.id;
+  useEffect(() => setRated(null), [itemId]);
 
   return (
     <div style={s.card}>

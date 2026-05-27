@@ -618,43 +618,6 @@
   },
   "components": {
     "schemas": {
-      "ArtifactItem": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "artifact_type": {
-            "type": "string",
-            "title": "Artifact Type"
-          },
-          "content": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Content"
-          },
-          "tags": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Tags"
-          },
-          "source_text": {
-            "type": "string",
-            "title": "Source Text"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "artifact_type",
-          "content",
-          "tags",
-          "source_text"
-        ],
-        "title": "ArtifactItem"
-      },
       "ArtifactOut": {
         "properties": {
           "id": {
@@ -769,6 +732,48 @@
           "created_at"
         ],
         "title": "CaptureOut"
+      },
+      "DrillItemOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id"
+          },
+          "item_type": {
+            "type": "string",
+            "title": "Item Type"
+          },
+          "content": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Content"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "source_text": {
+            "type": "string",
+            "title": "Source Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "artifact_id",
+          "item_type",
+          "content",
+          "tags",
+          "source_text"
+        ],
+        "title": "DrillItemOut"
       },
       "FlashcardPair": {
         "properties": {
@@ -888,12 +893,12 @@
       },
       "QueueResponse": {
         "properties": {
-          "artifacts": {
+          "items": {
             "items": {
-              "$ref": "#/components/schemas/ArtifactItem"
+              "$ref": "#/components/schemas/DrillItemOut"
             },
             "type": "array",
-            "title": "Artifacts"
+            "title": "Items"
           },
           "new_count": {
             "type": "integer",
@@ -906,7 +911,7 @@
         },
         "type": "object",
         "required": [
-          "artifacts",
+          "items",
           "new_count",
           "reviewed_count"
         ],
@@ -981,9 +986,9 @@
       },
       "RecordEventRequest": {
         "properties": {
-          "artifact_id": {
+          "item_id": {
             "type": "string",
-            "title": "Artifact Id"
+            "title": "Item Id"
           },
           "outcome": {
             "type": "string",
@@ -996,7 +1001,7 @@
         },
         "type": "object",
         "required": [
-          "artifact_id",
+          "item_id",
           "outcome"
         ],
         "title": "RecordEventRequest"

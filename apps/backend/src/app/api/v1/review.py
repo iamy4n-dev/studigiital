@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import UserClaims, get_current_user
 from app.core.db import get_session
 from app.models.artifact import Artifact
+from app.models.artifact_item import ArtifactItem
 from app.models.capture import Capture
 from app.models.review_event import ReviewEvent
 
@@ -20,22 +21,23 @@ CurrentUser = Annotated[UserClaims, Depends(get_current_user)]
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
-class ArtifactItem(BaseModel):
+class DrillItemOut(BaseModel):
     id: str
-    artifact_type: str
+    artifact_id: str
+    item_type: str
     content: dict[str, Any]
     tags: list[str]
     source_text: str
 
 
 class QueueResponse(BaseModel):
-    artifacts: list[ArtifactItem]
+    items: list[DrillItemOut]
     new_count: int
     reviewed_count: int
 
 
 class RecordEventRequest(BaseModel):
-    artifact_id: str
+    item_id: str
     outcome: Literal["passed", "failed"]
 
 
@@ -52,50 +54,52 @@ async def get_queue(
 ) -> QueueResponse:
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
 
-    artifact_stmt = (
-        select(Artifact, Capture)
+    item_stmt = (
+        select(ArtifactItem, Artifact, Capture)
+        .join(Artifact, ArtifactItem.artifact_id == Artifact.id)
         .join(Capture, Artifact.capture_id == Capture.id)
         .where(Capture.user_id == user.user_id)
     )
-    rows = await session.execute(artifact_stmt)
-    all_pairs = rows.all()
+    rows = await session.execute(item_stmt)
+    all_triples = rows.all()
 
     matching = [
-        (a, c)
-        for a, c in all_pairs
+        (item, a, c)
+        for item, a, c in all_triples
         if isinstance(a.tags, list) and any(t in a.tags for t in tag_list)
     ]
 
-    reviewed_ids_stmt = select(ReviewEvent.artifact_id).where(
+    reviewed_ids_stmt = select(ReviewEvent.item_id).where(
         ReviewEvent.user_id == user.user_id
     )
     reviewed_rows = await session.execute(reviewed_ids_stmt)
     reviewed_ids = {row[0] for row in reviewed_rows.all()}
 
-    new_count = sum(1 for a, _ in matching if a.id not in reviewed_ids)
-    reviewed_count = sum(1 for a, _ in matching if a.id in reviewed_ids)
+    new_count = sum(1 for item, _, _ in matching if item.id not in reviewed_ids)
+    reviewed_count = sum(1 for item, _, _ in matching if item.id in reviewed_ids)
 
     if mode == "structured":
-        unreviewed = [(a, c) for a, c in matching if a.id not in reviewed_ids]
-        reviewed = [(a, c) for a, c in matching if a.id in reviewed_ids]
+        unreviewed = [(item, a, c) for item, a, c in matching if item.id not in reviewed_ids]
+        reviewed = [(item, a, c) for item, a, c in matching if item.id in reviewed_ids]
         ordered = unreviewed + reviewed
     else:
         import random
         ordered = list(matching)
         random.shuffle(ordered)
 
-    artifacts = [
-        ArtifactItem(
-            id=a.id,
-            artifact_type=a.artifact_type,
-            content=a.content,
+    items = [
+        DrillItemOut(
+            id=item.id,
+            artifact_id=item.artifact_id,
+            item_type=item.item_type,
+            content=item.content,
             tags=a.tags if isinstance(a.tags, list) else [],
             source_text=c.raw_content or "",
         )
-        for a, c in ordered
+        for item, a, c in ordered
     ]
 
-    return QueueResponse(artifacts=artifacts, new_count=new_count, reviewed_count=reviewed_count)
+    return QueueResponse(items=items, new_count=new_count, reviewed_count=reviewed_count)
 
 
 @router.post("/events", response_model=RecordEventResponse, status_code=201)
@@ -108,7 +112,7 @@ async def record_event(
     event = ReviewEvent(
         id=event_id,
         user_id=user.user_id,
-        artifact_id=payload.artifact_id,
+        item_id=payload.item_id,
         outcome=payload.outcome,
     )
     session.add(event)

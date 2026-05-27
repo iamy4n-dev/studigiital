@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -14,38 +13,44 @@ from app.core.db import get_session
 from app.main import app
 
 
-def _make_artifact(
+def _make_item(
+    item_id: str,
     artifact_id: str,
+    item_type: str,
+    content: dict,
     tags: list[str],
-    content: dict[str, Any] | None = None,
-    artifact_type: str = "generate_flashcard",
-) -> tuple[MagicMock, MagicMock]:
+) -> tuple[MagicMock, MagicMock, MagicMock]:
+    item = MagicMock()
+    item.id = item_id
+    item.artifact_id = artifact_id
+    item.item_type = item_type
+    item.content = content
+    item.created_at = datetime.now(UTC)
+
     artifact = MagicMock()
     artifact.id = artifact_id
-    artifact.capture_id = "cap-1"
-    artifact.artifact_type = artifact_type
     artifact.tags = tags
-    artifact.content = content or {"cards": [{"front": "Q", "back": "A"}]}
-    artifact.created_at = datetime.now(UTC)
 
     capture = MagicMock()
-    capture.id = "cap-1"
     capture.user_id = "test-user"
     capture.raw_content = "Some source text"
 
-    return artifact, capture
+    return item, artifact, capture
 
 
-def _make_session(artifact_rows: list[tuple[MagicMock, MagicMock]]) -> AsyncSession:
+def _make_session(
+    item_rows: list[tuple[MagicMock, MagicMock, MagicMock]],
+    reviewed_ids: list[str] | None = None,
+) -> AsyncSession:
     session = MagicMock(spec=AsyncSession)
 
-    artifact_result = MagicMock()
-    artifact_result.all.return_value = artifact_rows
+    item_result = MagicMock()
+    item_result.all.return_value = item_rows
 
-    event_result = MagicMock()
-    event_result.all.return_value = []
+    reviewed_result = MagicMock()
+    reviewed_result.all.return_value = [(id,) for id in (reviewed_ids or [])]
 
-    session.execute = AsyncMock(side_effect=[artifact_result, event_result])
+    session.execute = AsyncMock(side_effect=[item_result, reviewed_result])
     session.add = MagicMock()
     session.commit = AsyncMock()
     return session
@@ -61,114 +66,133 @@ def override_auth() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Slice 1 — tracer bullet: queue endpoint returns 200 with artifact list
+# Slice 1 — tracer bullet: queue returns items list
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_queue_returns_200_with_artifact_list() -> None:
-    artifact, capture = _make_artifact("art-1", ["biology"])
-    mock_session = _make_session([(artifact, capture)])
+async def test_queue_returns_200_with_item_list() -> None:
+    item, artifact, capture = _make_item(
+        "item-1", "art-1", "flashcard", {"front": "Q", "back": "A"}, ["biology"]
+    )
+    mock_session = _make_session([(item, artifact, capture)])
 
-    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
         yield mock_session
 
-    app.dependency_overrides[get_session] = _session_override
+    app.dependency_overrides[get_session] = _override
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/review/queue?tags=biology&mode=structured")
 
     assert response.status_code == 200
     body = response.json()
-    assert "artifacts" in body
-    assert isinstance(body["artifacts"], list)
+    assert "items" in body
+    assert isinstance(body["items"], list)
 
 
 # ---------------------------------------------------------------------------
-# Slice 2 — queue excludes artifacts belonging to other users
+# Slice 2 — item has item_type and content
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_queue_excludes_other_users_artifacts() -> None:
-    other_artifact = MagicMock()
-    other_artifact.id = "art-other"
-    other_artifact.tags = ["biology"]
+async def test_queue_item_has_item_type_and_content() -> None:
+    item, artifact, capture = _make_item(
+        "item-1", "art-1", "flashcard", {"front": "Q", "back": "A"}, ["biology"]
+    )
+    mock_session = _make_session([(item, artifact, capture)])
 
-    other_capture = MagicMock()
-    other_capture.id = "cap-other"
-    other_capture.user_id = "other-user"
-    other_capture.raw_content = "other"
-
-    mock_session = _make_session([])  # no artifacts for test-user
-
-    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
         yield mock_session
 
-    app.dependency_overrides[get_session] = _session_override
+    app.dependency_overrides[get_session] = _override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/review/queue?tags=biology&mode=structured")
+
+    items = response.json()["items"]
+    assert len(items) == 1
+    assert items[0]["item_type"] == "flashcard"
+    assert items[0]["content"] == {"front": "Q", "back": "A"}
+    assert items[0]["id"] == "item-1"
+    assert items[0]["artifact_id"] == "art-1"
+
+
+# ---------------------------------------------------------------------------
+# Slice 3 — queue excludes items belonging to other users
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_queue_excludes_other_users_items() -> None:
+    mock_session = _make_session([])
+
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_session] = _override
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/review/queue?tags=biology&mode=structured")
 
     assert response.status_code == 200
-    assert response.json()["artifacts"] == []
+    assert response.json()["items"] == []
 
 
 # ---------------------------------------------------------------------------
-# Slice 3 — structured mode: unreviewed artifacts appear before reviewed ones
+# Slice 4 — structured mode: unreviewed items appear before reviewed ones
 # ---------------------------------------------------------------------------
-
-
-def _make_reviewed_session(
-    unreviewed_id: str, reviewed_id: str
-) -> AsyncSession:
-    unreviewed, cap1 = _make_artifact(unreviewed_id, ["biology"])
-    reviewed, cap2 = _make_artifact(reviewed_id, ["biology"])
-
-    artifact_result = MagicMock()
-    artifact_result.all.return_value = [(reviewed, cap2), (unreviewed, cap1)]
-
-    event_result = MagicMock()
-    event_result.all.return_value = [(reviewed_id,)]
-
-    session = MagicMock(spec=AsyncSession)
-    session.execute = AsyncMock(side_effect=[artifact_result, event_result])
-    session.add = MagicMock()
-    session.commit = AsyncMock()
-    return session
 
 
 @pytest.mark.asyncio
-async def test_structured_mode_puts_unreviewed_first() -> None:
-    mock_session = _make_reviewed_session("art-new", "art-old")
+async def test_structured_mode_puts_unreviewed_items_first() -> None:
+    new_item, art1, cap1 = _make_item(
+        "item-new", "art-1", "flashcard", {"front": "Q", "back": "A"}, ["biology"]
+    )
+    old_item, art2, cap2 = _make_item(
+        "item-old", "art-2", "flashcard", {"front": "Q2", "back": "A2"}, ["biology"]
+    )
+    mock_session = _make_session(
+        [(old_item, art2, cap2), (new_item, art1, cap1)],
+        reviewed_ids=["item-old"],
+    )
 
-    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
         yield mock_session
 
-    app.dependency_overrides[get_session] = _session_override
+    app.dependency_overrides[get_session] = _override
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/review/queue?tags=biology&mode=structured")
 
-    assert response.status_code == 200
-    artifact_ids = [a["id"] for a in response.json()["artifacts"]]
-    assert artifact_ids[0] == "art-new"
-    assert artifact_ids[1] == "art-old"
+    ids = [i["id"] for i in response.json()["items"]]
+    assert ids[0] == "item-new"
+    assert ids[1] == "item-old"
 
 
 # ---------------------------------------------------------------------------
-# Slice 4 — response includes new_count and reviewed_count
+# Slice 5 — response includes new_count and reviewed_count
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_queue_response_includes_counts() -> None:
-    mock_session = _make_reviewed_session("art-new", "art-old")
+    new_item, art1, cap1 = _make_item(
+        "item-new", "art-1", "flashcard", {"front": "Q", "back": "A"}, ["biology"]
+    )
+    old_item, art2, cap2 = _make_item(
+        "item-old", "art-2", "flashcard", {"front": "Q2", "back": "A2"}, ["biology"]
+    )
+    mock_session = _make_session(
+        [(old_item, art2, cap2), (new_item, art1, cap1)],
+        reviewed_ids=["item-old"],
+    )
 
-    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
         yield mock_session
 
-    app.dependency_overrides[get_session] = _session_override
+    app.dependency_overrides[get_session] = _override
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/review/queue?tags=biology&mode=structured")
@@ -179,33 +203,41 @@ async def test_queue_response_includes_counts() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Slice 5 — multi-tag: returns artifacts tagged with ANY selected tag
+# Slice 6 — multi-tag: returns items from artifacts tagged with ANY selected tag
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_queue_multi_tag_returns_union() -> None:
-    bio_art, bio_cap = _make_artifact("art-bio", ["biology"])
-    chem_art, chem_cap = _make_artifact("art-chem", ["chemistry"])
-    unrelated, unrel_cap = _make_artifact("art-other", ["history"])
+    bio_item, bio_art, bio_cap = _make_item(
+        "item-bio", "art-bio", "flashcard", {"front": "Q", "back": "A"}, ["biology"]
+    )
+    chem_item, chem_art, chem_cap = _make_item(
+        "item-chem", "art-chem", "note", {"title": "Chem", "body_markdown": "..."}, ["chemistry"]
+    )
+    hist_item, hist_art, hist_cap = _make_item(
+        "item-hist", "art-hist", "quiz_question",
+        {"question": "Q?", "options": ["A", "B"], "correct_index": 0}, ["history"]
+    )
 
-    artifact_result = MagicMock()
-    artifact_result.all.return_value = [
-        (bio_art, bio_cap), (chem_art, chem_cap), (unrelated, unrel_cap)
+    item_result = MagicMock()
+    item_result.all.return_value = [
+        (bio_item, bio_art, bio_cap),
+        (chem_item, chem_art, chem_cap),
+        (hist_item, hist_art, hist_cap),
     ]
+    reviewed_result = MagicMock()
+    reviewed_result.all.return_value = []
 
-    event_result = MagicMock()
-    event_result.all.return_value = []
+    session = MagicMock(spec=AsyncSession)
+    session.execute = AsyncMock(side_effect=[item_result, reviewed_result])
+    session.add = MagicMock()
+    session.commit = AsyncMock()
 
-    mock_session = MagicMock(spec=AsyncSession)
-    mock_session.execute = AsyncMock(side_effect=[artifact_result, event_result])
-    mock_session.add = MagicMock()
-    mock_session.commit = AsyncMock()
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
+        yield session
 
-    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
-        yield mock_session
-
-    app.dependency_overrides[get_session] = _session_override
+    app.dependency_overrides[get_session] = _override
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get(
@@ -213,13 +245,13 @@ async def test_queue_multi_tag_returns_union() -> None:
         )
 
     assert response.status_code == 200
-    ids = {a["id"] for a in response.json()["artifacts"]}
-    assert ids == {"art-bio", "art-chem"}
-    assert "art-other" not in ids
+    ids = {i["id"] for i in response.json()["items"]}
+    assert ids == {"item-bio", "item-chem"}
+    assert "item-hist" not in ids
 
 
 # ---------------------------------------------------------------------------
-# Slice 6 — POST /events records a review event (tracer bullet)
+# Slice 7 — POST /events with item_id records a review event
 # ---------------------------------------------------------------------------
 
 
@@ -234,15 +266,15 @@ def _make_event_session() -> AsyncSession:
 async def test_record_event_returns_201_with_id() -> None:
     mock_session = _make_event_session()
 
-    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
         yield mock_session
 
-    app.dependency_overrides[get_session] = _session_override
+    app.dependency_overrides[get_session] = _override
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/v1/review/events",
-            json={"artifact_id": "art-1", "outcome": "passed"},
+            json={"item_id": "item-1", "outcome": "passed"},
         )
 
     assert response.status_code == 201
@@ -253,7 +285,7 @@ async def test_record_event_returns_201_with_id() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Slice 7 — invalid outcome returns 422
+# Slice 8 — invalid outcome returns 422
 # ---------------------------------------------------------------------------
 
 
@@ -262,7 +294,7 @@ async def test_record_event_invalid_outcome_returns_422() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/v1/review/events",
-            json={"artifact_id": "art-1", "outcome": "maybe"},
+            json={"item_id": "item-1", "outcome": "maybe"},
         )
 
     assert response.status_code == 422
