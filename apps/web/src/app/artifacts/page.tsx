@@ -54,9 +54,8 @@ function ArtifactList({ getToken }: { getToken: () => Promise<string | null> }) 
           Studigital
         </Link>
         <nav style={styles.nav}>
-          <Link href="/capture" style={styles.navLink}>
-            Capture
-          </Link>
+          <Link href="/dashboard" style={styles.navLink}>Home</Link>
+          <Link href="/capture" style={styles.navLink}>Capture</Link>
           <span style={{ ...styles.navLink, color: "#1a1a1a", fontWeight: 700 }}>History</span>
         </nav>
       </header>
