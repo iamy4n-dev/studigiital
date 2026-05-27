@@ -21,6 +21,19 @@ a {
   text-decoration: none;
 }
 
+/* Transformation progress spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #1a1a1a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 /* Markdown rendered content */
 .md { line-height: 1.7; font-size: 1rem; color: #333; }
 .md p { margin-bottom: 0.75rem; }
