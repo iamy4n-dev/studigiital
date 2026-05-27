@@ -24,12 +24,13 @@ class ArtifactOut(BaseModel):
     artifact_type: str
     content: dict[str, Any]
     created_at: str
+    source_text: str
 
 
 @router.get("/", response_model=list[ArtifactOut])
 async def list_artifacts(user: CurrentUser, session: SessionDep) -> list[ArtifactOut]:
     stmt = (
-        select(Artifact)
+        select(Artifact, Capture)
         .join(Capture, Artifact.capture_id == Capture.id)
         .where(Capture.user_id == user.user_id)
         .order_by(Artifact.created_at.desc())
@@ -42,26 +43,29 @@ async def list_artifacts(user: CurrentUser, session: SessionDep) -> list[Artifac
             artifact_type=a.artifact_type,
             content=a.content,
             created_at=a.created_at.isoformat(),
+            source_text=c.raw_content or "",
         )
-        for a in rows.scalars().all()
+        for a, c in rows.all()
     ]
 
 
 @router.get("/{artifact_id}", response_model=ArtifactOut)
 async def get_artifact(artifact_id: str, user: CurrentUser, session: SessionDep) -> ArtifactOut:
     stmt = (
-        select(Artifact)
+        select(Artifact, Capture)
         .join(Capture, Artifact.capture_id == Capture.id)
         .where(Artifact.id == artifact_id, Capture.user_id == user.user_id)
     )
     row = await session.execute(stmt)
-    artifact = row.scalar_one_or_none()
-    if artifact is None:
+    result = row.one_or_none()
+    if result is None:
         raise HTTPException(status_code=404, detail="Artifact not found")
+    artifact, capture = result
     return ArtifactOut(
         id=artifact.id,
         capture_id=artifact.capture_id,
         artifact_type=artifact.artifact_type,
         content=artifact.content,
         created_at=artifact.created_at.isoformat(),
+        source_text=capture.raw_content or "",
     )

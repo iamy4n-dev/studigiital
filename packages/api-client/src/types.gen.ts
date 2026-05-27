@@ -8,6 +8,7 @@ export type ArtifactOut = {
         [key: string]: unknown;
     };
     created_at: string;
+    source_text: string;
 };
 
 export type CaptureCreate = {
