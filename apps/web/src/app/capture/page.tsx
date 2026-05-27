@@ -7,6 +7,7 @@ import { mapErrorMessage } from "@/lib/errors";
 import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/skills";
 import type { FlashcardPair, QuizQuestion, TransformResult } from "@/lib/transform";
 import { MarkdownContent } from "@/lib/MarkdownContent";
+import { tagColors } from "@/lib/tagColor";
 
 type SkillChoice = "auto" | SkillName;
 
@@ -221,6 +222,39 @@ function TransformingView() {
   );
 }
 
+type ApiTagOut = { name: string; bg: string; text: string };
+
+function TagPill({
+  tag,
+  active,
+  onClick,
+}: {
+  tag: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const { bg, text } = tagColors(tag);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        fontSize: "0.8125rem",
+        fontWeight: 600,
+        padding: "0.25rem 0.625rem",
+        borderRadius: 999,
+        border: active ? "2px solid transparent" : "1.5px solid #e5e7eb",
+        background: active ? bg : "#fff",
+        color: active ? text : "#9ca3af",
+        cursor: "pointer",
+        transition: "all 0.12s",
+      }}
+    >
+      {tag}
+    </button>
+  );
+}
+
 function TagConfirm({
   suggestions,
   artifactId,
@@ -230,10 +264,25 @@ function TagConfirm({
   artifactId: string;
   getToken: () => Promise<string | null>;
 }) {
+  const [existingTags, setExistingTags] = useState<ApiTagOut[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set(suggestions));
+  const [newTag, setNewTag] = useState("");
   const [saved, setSaved] = useState(false);
 
-  if (suggestions.length === 0) return null;
+  useEffect(() => {
+    async function fetchExisting() {
+      try {
+        const token = await getToken();
+        const res = await fetch(`${API_URL}/api/v1/tags/`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) setExistingTags(await res.json());
+      } catch {
+        // non-critical
+      }
+    }
+    fetchExisting();
+  }, [getToken]);
 
   function toggle(tag: string) {
     setSelected((prev) => {
@@ -244,7 +293,14 @@ function TagConfirm({
     });
   }
 
-  async function confirmTags() {
+  function addNewTag() {
+    const trimmed = newTag.trim().toLowerCase();
+    if (!trimmed) return;
+    toggle(trimmed);
+    setNewTag("");
+  }
+
+  async function save() {
     try {
       const token = await getToken();
       await fetch(`${API_URL}/api/v1/artifacts/${artifactId}/tags`, {
@@ -263,35 +319,73 @@ function TagConfirm({
 
   if (saved) {
     return (
-      <div style={styles.tagConfirmRow}>
-        {[...selected].map((tag) => (
-          <span key={tag} style={styles.tagSaved}>{tag}</span>
-        ))}
+      <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+        {[...selected].map((tag) => {
+          const { bg, text } = tagColors(tag);
+          return (
+            <span
+              key={tag}
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                padding: "0.2rem 0.5rem",
+                borderRadius: 999,
+                background: bg,
+                color: text,
+              }}
+            >
+              {tag}
+            </span>
+          );
+        })}
       </div>
     );
   }
 
+  const otherExisting = existingTags.filter((t) => !suggestions.includes(t.name));
+
   return (
     <div style={styles.tagConfirmContainer}>
-      <p style={styles.tagConfirmLabel}>Suggested tags — keep what fits:</p>
-      <div style={styles.tagConfirmRow}>
-        {suggestions.map((tag) => (
-          <button
-            key={tag}
-            type="button"
-            onClick={() => toggle(tag)}
-            style={{
-              ...styles.tagToggle,
-              ...(selected.has(tag) ? styles.tagToggleActive : {}),
-            }}
-          >
-            {tag}
+      {suggestions.length > 0 && (
+        <>
+          <p style={styles.tagConfirmLabel}>Suggested</p>
+          <div style={styles.tagConfirmRow}>
+            {suggestions.map((tag) => (
+              <TagPill key={tag} tag={tag} active={selected.has(tag)} onClick={() => toggle(tag)} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {otherExisting.length > 0 && (
+        <>
+          <p style={styles.tagConfirmLabel}>Your tags</p>
+          <div style={styles.tagConfirmRow}>
+            {otherExisting.map(({ name }) => (
+              <TagPill key={name} tag={name} active={selected.has(name)} onClick={() => toggle(name)} />
+            ))}
+          </div>
+        </>
+      )}
+
+      <div style={styles.tagInputRow}>
+        <input
+          style={styles.tagInput}
+          value={newTag}
+          onChange={(e) => setNewTag(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addNewTag())}
+          placeholder="New tag…"
+        />
+        {newTag.trim() && (
+          <button type="button" style={styles.tagAddButton} onClick={addNewTag}>
+            Add
           </button>
-        ))}
+        )}
       </div>
+
       {selected.size > 0 && (
-        <button type="button" style={styles.tagSaveButton} onClick={confirmTags}>
-          Save tags →
+        <button type="button" style={styles.tagSaveButton} onClick={save}>
+          Save {selected.size} tag{selected.size !== 1 ? "s" : ""} →
         </button>
       )}
     </div>
@@ -654,56 +748,59 @@ const styles: Record<string, React.CSSProperties> = {
   tagConfirmContainer: {
     display: "flex",
     flexDirection: "column" as const,
-    gap: "0.5rem",
-    padding: "0.75rem",
+    gap: "0.625rem",
+    padding: "0.875rem",
     background: "#f9fafb",
-    borderRadius: 8,
+    borderRadius: 10,
     border: "1px solid #e5e7eb",
   },
   tagConfirmLabel: {
-    fontSize: "0.8125rem",
-    color: "#6b7280",
-    fontWeight: 500,
+    fontSize: "0.75rem",
+    color: "#9ca3af",
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase" as const,
     margin: 0,
   },
   tagConfirmRow: {
     display: "flex",
     gap: "0.375rem",
     flexWrap: "wrap" as const,
+  },
+  tagInputRow: {
+    display: "flex",
+    gap: "0.375rem",
     alignItems: "center",
   },
-  tagToggle: {
+  tagInput: {
+    flex: 1,
+    fontSize: "0.8125rem",
+    padding: "0.3rem 0.6rem",
+    border: "1.5px solid #e5e7eb",
+    borderRadius: 6,
+    outline: "none",
+    fontFamily: "inherit",
+    background: "#fff",
+  },
+  tagAddButton: {
     fontSize: "0.8125rem",
     fontWeight: 600,
-    padding: "0.25rem 0.625rem",
-    borderRadius: 999,
+    padding: "0.3rem 0.625rem",
+    borderRadius: 6,
     border: "1.5px solid #d1d5db",
     background: "#fff",
-    color: "#6b7280",
+    color: "#374151",
     cursor: "pointer",
-  },
-  tagToggleActive: {
-    border: "1.5px solid #1a1a1a",
-    background: "#1a1a1a",
-    color: "#fff",
   },
   tagSaveButton: {
     alignSelf: "flex-start" as const,
     fontSize: "0.8125rem",
     fontWeight: 600,
-    padding: "0.3rem 0.75rem",
+    padding: "0.35rem 0.875rem",
     borderRadius: 6,
     border: "none",
     background: "#1a1a1a",
     color: "#fff",
     cursor: "pointer",
-  },
-  tagSaved: {
-    fontSize: "0.75rem",
-    fontWeight: 600,
-    padding: "0.2rem 0.5rem",
-    borderRadius: 999,
-    background: "#dcfce7",
-    color: "#166534",
   },
 };

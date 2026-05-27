@@ -382,49 +382,12 @@
               }
             }
           }
-        }
-      }
-    },
-    "/api/v1/tags/{tag_id}": {
-      "get": {
-        "tags": [
-          "tags"
-        ],
-        "summary": "Get Tag",
-        "operationId": "get_tag_api_v1_tags__tag_id__get",
-        "parameters": [
+        },
+        "security": [
           {
-            "name": "tag_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Tag Id"
-            }
+            "HTTPBearer": []
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TagOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
+        ]
       }
     },
     "/api/v1/users/me": {
@@ -885,29 +848,24 @@
       },
       "TagOut": {
         "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
           "name": {
             "type": "string",
             "title": "Name"
           },
-          "color": {
+          "bg": {
             "type": "string",
-            "title": "Color"
+            "title": "Bg"
           },
-          "mastery_score": {
-            "type": "number",
-            "title": "Mastery Score"
+          "text": {
+            "type": "string",
+            "title": "Text"
           }
         },
         "type": "object",
         "required": [
-          "id",
           "name",
-          "color",
-          "mastery_score"
+          "bg",
+          "text"
         ],
         "title": "TagOut"
       },

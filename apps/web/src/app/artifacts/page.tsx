@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/skills";
 import { buildCaptureUrl } from "@/lib/captureUrl";
+import { tagColors } from "@/lib/tagColor";
 
 interface ArtifactOut {
   id: string;
@@ -116,9 +117,14 @@ function ArtifactCard({ artifact }: { artifact: ArtifactOut }) {
       <p style={styles.preview}>{preview}</p>
       {artifact.tags.length > 0 && (
         <div style={styles.tagRow}>
-          {artifact.tags.map((tag) => (
-            <span key={tag} style={styles.tag}>{tag}</span>
-          ))}
+          {artifact.tags.map((tag) => {
+            const { bg, text } = tagColors(tag);
+            return (
+              <span key={tag} style={{ ...styles.tag, background: bg, color: text }}>
+                {tag}
+              </span>
+            );
+          })}
         </div>
       )}
       {rerunSkills && artifact.source_text && (
@@ -287,7 +293,5 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "0.04em",
     padding: "0.15rem 0.5rem",
     borderRadius: 999,
-    background: "#f3f4f6",
-    color: "#4b5563",
   },
 };
