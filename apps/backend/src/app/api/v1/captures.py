@@ -145,6 +145,7 @@ async def transform_capture(
         status="transformed",
     )
     session.add(capture)
+    await session.flush()  # INSERT capture before artifact references it via FK
     artifact = Artifact(
         capture_id=capture.id,
         artifact_type=skill_name,
