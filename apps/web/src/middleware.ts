@@ -1,10 +1,9 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
-
-const isProtectedRoute = createRouteMatcher(["/capture(.*)"]);
+import { isProtected } from "@/lib/protectedRoutes";
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) await auth.protect();
+  if (isProtected(req.nextUrl.pathname)) await auth.protect();
 });
 
 export default function middleware(req: NextRequest, event: NextFetchEvent) {
