@@ -119,6 +119,9 @@ function CaptureShell({
           <a href="/dashboard" style={styles.devLink}>
             Home
           </a>
+          <a href="/review" style={styles.devLink}>
+            Review
+          </a>
           <a href="/artifacts" style={styles.devLink}>
             History
           </a>

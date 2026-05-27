@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { SuggestTagsApiV1CapturesSuggestTagsPostData, SuggestTagsApiV1CapturesSuggestTagsPostResponse, TransformCaptureApiV1CapturesTransformPostData, TransformCaptureApiV1CapturesTransformPostResponse, ListCapturesApiV1CapturesGetResponse, CreateCaptureApiV1CapturesPostData, CreateCaptureApiV1CapturesPostResponse, GetCaptureApiV1CapturesCaptureIdGetData, GetCaptureApiV1CapturesCaptureIdGetResponse, ListArtifactsApiV1ArtifactsGetResponse, GetArtifactApiV1ArtifactsArtifactIdGetData, GetArtifactApiV1ArtifactsArtifactIdGetResponse, SetArtifactTagsApiV1ArtifactsArtifactIdTagsPutData, SetArtifactTagsApiV1ArtifactsArtifactIdTagsPutResponse, ListTagsApiV1TagsGetResponse, GetMeApiV1UsersMeGetResponse, GetProfileApiV1UsersProfileGetResponse, CreateProfileApiV1UsersProfilePostData, CreateProfileApiV1UsersProfilePostResponse, HealthHealthGetResponse } from './types.gen';
+import type { SuggestTagsApiV1CapturesSuggestTagsPostData, SuggestTagsApiV1CapturesSuggestTagsPostResponse, TransformCaptureApiV1CapturesTransformPostData, TransformCaptureApiV1CapturesTransformPostResponse, ListCapturesApiV1CapturesGetResponse, CreateCaptureApiV1CapturesPostData, CreateCaptureApiV1CapturesPostResponse, GetCaptureApiV1CapturesCaptureIdGetData, GetCaptureApiV1CapturesCaptureIdGetResponse, ListArtifactsApiV1ArtifactsGetResponse, GetArtifactApiV1ArtifactsArtifactIdGetData, GetArtifactApiV1ArtifactsArtifactIdGetResponse, SetArtifactTagsApiV1ArtifactsArtifactIdTagsPutData, SetArtifactTagsApiV1ArtifactsArtifactIdTagsPutResponse, ListTagsApiV1TagsGetResponse, GetMeApiV1UsersMeGetResponse, GetProfileApiV1UsersProfileGetResponse, CreateProfileApiV1UsersProfilePostData, CreateProfileApiV1UsersProfilePostResponse, GetQueueApiV1ReviewQueueGetData, GetQueueApiV1ReviewQueueGetResponse, RecordEventApiV1ReviewEventsPostData, RecordEventApiV1ReviewEventsPostResponse, HealthHealthGetResponse } from './types.gen';
 
 /**
  * Suggest Tags
@@ -196,6 +196,47 @@ export const createProfileApiV1UsersProfilePost = (data: CreateProfileApiV1Users
     return __request(OpenAPI, {
         method: 'POST',
         url: '/api/v1/users/profile',
+        body: data.requestBody,
+        mediaType: 'application/json',
+        errors: {
+            422: 'Validation Error'
+        }
+    });
+};
+
+/**
+ * Get Queue
+ * @param data The data for the request.
+ * @param data.tags
+ * @param data.mode
+ * @returns QueueResponse Successful Response
+ * @throws ApiError
+ */
+export const getQueueApiV1ReviewQueueGet = (data: GetQueueApiV1ReviewQueueGetData): CancelablePromise<GetQueueApiV1ReviewQueueGetResponse> => {
+    return __request(OpenAPI, {
+        method: 'GET',
+        url: '/api/v1/review/queue',
+        query: {
+            tags: data.tags,
+            mode: data.mode
+        },
+        errors: {
+            422: 'Validation Error'
+        }
+    });
+};
+
+/**
+ * Record Event
+ * @param data The data for the request.
+ * @param data.requestBody
+ * @returns RecordEventResponse Successful Response
+ * @throws ApiError
+ */
+export const recordEventApiV1ReviewEventsPost = (data: RecordEventApiV1ReviewEventsPostData): CancelablePromise<RecordEventApiV1ReviewEventsPostResponse> => {
+    return __request(OpenAPI, {
+        method: 'POST',
+        url: '/api/v1/review/events',
         body: data.requestBody,
         mediaType: 'application/json',
         errors: {

@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import artifacts, captures, tags, users
+from app.api.v1 import artifacts, captures, review, tags, users
 from app.core.config import settings
 from app.core.db import engine
 
@@ -36,6 +36,7 @@ app.include_router(captures.router, prefix="/api/v1/captures", tags=["captures"]
 app.include_router(artifacts.router, prefix="/api/v1/artifacts", tags=["artifacts"])
 app.include_router(tags.router, prefix="/api/v1/tags", tags=["tags"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(review.router, prefix="/api/v1/review", tags=["review"])
 
 
 @app.get("/health")
