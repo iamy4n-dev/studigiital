@@ -11,7 +11,9 @@ class Settings(BaseSettings):
     aws_region: str = "us-east-1"
     s3_bucket: str = "studigiital-media"
     clerk_secret_key: str = ""
-    clerk_jwks_url: str = "https://api.clerk.com/v1/jwks"
+    clerk_publishable_key: str = ""
+    # Derived automatically from clerk_publishable_key when left blank.
+    clerk_jwks_url: str = ""
     dev_mode: bool = False
 
     # LLM backend — "anthropic" uses Anthropic SDK directly;
