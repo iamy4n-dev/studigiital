@@ -5,13 +5,13 @@ const devMode = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 export default function HomePage() {
   if (devMode) {
-    redirect("/capture");
+    redirect("/dashboard");
   }
 
   return (
     <>
       <SignedIn>
-        <RedirectToCapture />
+        <RedirectToDashboard />
       </SignedIn>
       <SignedOut>
         <main style={styles.page}>
@@ -20,7 +20,7 @@ export default function HomePage() {
             <p style={styles.tagline}>
               Capture a mistake or insight. Get a flashcard in seconds.
             </p>
-            <SignInButton mode="modal" forceRedirectUrl="/capture">
+            <SignInButton mode="modal" forceRedirectUrl="/dashboard">
               <button style={styles.cta}>Get started — it&apos;s free</button>
             </SignInButton>
           </div>
@@ -30,8 +30,8 @@ export default function HomePage() {
   );
 }
 
-function RedirectToCapture(): never {
-  redirect("/capture");
+function RedirectToDashboard(): never {
+  redirect("/dashboard");
 }
 
 const styles: Record<string, React.CSSProperties> = {
