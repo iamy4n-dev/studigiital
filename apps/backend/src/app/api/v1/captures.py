@@ -3,8 +3,9 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import UserClaims, get_current_user
@@ -49,6 +50,7 @@ class TransformRequest(BaseModel):
     text: str = Field(min_length=1)
     tier: Literal["free", "paid"] = "free"
     skill_name: str | None = None  # if set, skips the infer step
+    source_artifact_id: str | None = None  # if set, inherit committed tags (Derivation)
 
 
 class FlashcardTransformResponse(BaseModel):
@@ -143,9 +145,22 @@ async def transform_capture(
     else:
         raise ValueError(f"Unsupported skill: {skill_name!r}")
 
-    tags_skill = SuggestTagsSkill(backend, settings.llm_model_infer)
-    tags_out = await tags_skill.run(SuggestTagsInput(text=payload.text))
-    result.suggested_tags = tags_out.suggestions
+    if payload.source_artifact_id:
+        stmt = (
+            select(Artifact, Capture)
+            .join(Capture, Artifact.capture_id == Capture.id)
+            .where(Artifact.id == payload.source_artifact_id, Capture.user_id == user.user_id)
+        )
+        row = await session.execute(stmt)
+        source_result = row.one_or_none()
+        if source_result is None:
+            raise HTTPException(status_code=404, detail="Source artifact not found")
+        source_artifact, _ = source_result
+        result.suggested_tags = source_artifact.tags if isinstance(source_artifact.tags, list) else []
+    else:
+        tags_skill = SuggestTagsSkill(backend, settings.llm_model_infer)
+        tags_out = await tags_skill.run(SuggestTagsInput(text=payload.text))
+        result.suggested_tags = tags_out.suggestions
 
     artifact_id = str(uuid.uuid4())
     capture = Capture(

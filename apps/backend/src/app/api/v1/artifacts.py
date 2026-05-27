@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -70,7 +70,7 @@ async def get_artifact(artifact_id: str, user: CurrentUser, session: SessionDep)
 @router.put("/{artifact_id}/tags", response_model=ArtifactOut)
 async def set_artifact_tags(
     artifact_id: str,
-    tag_names: list[str],
+    tag_names: Annotated[list[str], Body(min_length=1)],
     user: CurrentUser,
     session: SessionDep,
 ) -> ArtifactOut:

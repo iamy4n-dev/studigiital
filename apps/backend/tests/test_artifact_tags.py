@@ -92,6 +92,13 @@ async def test_set_artifact_tags_returns_404_for_unknown_artifact(mock_session: 
     assert response.status_code == 404
 
 
+async def test_set_artifact_tags_rejects_empty_list() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.put("/api/v1/artifacts/art-1/tags", json=[])
+
+    assert response.status_code == 422
+
+
 async def test_artifact_response_includes_tags_after_set(mock_session: AsyncSession) -> None:
     artifact, capture = _make_artifact()
     artifact.tags = ["biology", "photosynthesis"]

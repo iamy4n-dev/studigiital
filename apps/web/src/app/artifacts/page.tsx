@@ -130,7 +130,7 @@ function ArtifactCard({ artifact }: { artifact: ArtifactOut }) {
       {rerunSkills && artifact.source_text && (
         <div style={styles.rerunRow}>
           {rerunSkills.map((s) => (
-            <a key={s} href={buildCaptureUrl(artifact.source_text, s)} style={styles.rerunLink}>
+            <a key={s} href={buildCaptureUrl(artifact.source_text, s, artifact.id)} style={styles.rerunLink}>
               Make {SKILL_LABELS[s]} →
             </a>
           ))}

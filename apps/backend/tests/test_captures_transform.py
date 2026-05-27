@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -233,6 +234,66 @@ async def test_transform_returns_note_schema_when_inferred() -> None:
     assert body["title"]
     assert body["body_markdown"]
     assert isinstance(body["key_points"], list)
+
+
+def _make_source_artifact_session(tags: list[str]) -> AsyncSession:
+    session = _make_mock_session()
+    source_artifact = MagicMock()
+    source_artifact.id = "art-source-1"
+    source_artifact.tags = tags
+    source_artifact.created_at = datetime.now(UTC)
+    source_capture = MagicMock()
+    result_row = MagicMock()
+    result_row.one_or_none.return_value = (source_artifact, source_capture)
+    session.execute = AsyncMock(return_value=result_row)
+    return session
+
+
+@pytest.mark.asyncio
+async def test_transform_with_source_artifact_id_inherits_committed_tags() -> None:
+    derivation_backend = _make_backend(
+        {"skill_name": "generate_flashcard", "confidence": 0.9},
+        {"cards": [{"front": "Q", "back": "A"}], "source_summary": "S"},
+    )
+    mock_session = _make_source_artifact_session(["biology", "photosynthesis"])
+
+    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_llm_backend] = lambda: derivation_backend
+    app.dependency_overrides[get_session] = _session_override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/captures/transform",
+            json={"text": "Photosynthesis text.", "source_artifact_id": "art-source-1"},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["suggested_tags"] == ["biology", "photosynthesis"]
+    assert derivation_backend.call_structured.call_count == 2  # infer + generate only, no suggest_tags  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_transform_with_invalid_source_artifact_id_returns_404(mock_backend: LLMBackend) -> None:
+    mock_session = _make_mock_session()
+    result_row = MagicMock()
+    result_row.one_or_none.return_value = None
+    mock_session.execute = AsyncMock(return_value=result_row)
+
+    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_session] = _session_override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/captures/transform",
+            json={"text": "Some text.", "source_artifact_id": "nonexistent"},
+        )
+
+    assert response.status_code == 404
 
 
 @pytest.mark.asyncio

@@ -35,17 +35,18 @@ function CaptureEntry() {
   const initialSkill: SkillChoice = (SKILL_NAMES as readonly string[]).includes(rawSkill ?? "")
     ? (rawSkill as SkillName)
     : "auto";
+  const sourceArtifactId = searchParams.get("source_artifact_id") ?? undefined;
 
   return DEV_MODE ? (
-    <CaptureShell getToken={async () => null} showUser={false} initialText={initialText} initialSkill={initialSkill} />
+    <CaptureShell getToken={async () => null} showUser={false} initialText={initialText} initialSkill={initialSkill} sourceArtifactId={sourceArtifactId} />
   ) : (
-    <AuthCapturePage initialText={initialText} initialSkill={initialSkill} />
+    <AuthCapturePage initialText={initialText} initialSkill={initialSkill} sourceArtifactId={sourceArtifactId} />
   );
 }
 
-function AuthCapturePage({ initialText, initialSkill }: { initialText: string; initialSkill: SkillChoice }) {
+function AuthCapturePage({ initialText, initialSkill, sourceArtifactId }: { initialText: string; initialSkill: SkillChoice; sourceArtifactId?: string }) {
   const { getToken } = useAuth();
-  return <CaptureShell getToken={getToken} showUser initialText={initialText} initialSkill={initialSkill} />;
+  return <CaptureShell getToken={getToken} showUser initialText={initialText} initialSkill={initialSkill} sourceArtifactId={sourceArtifactId} />;
 }
 
 function CaptureShell({
@@ -53,11 +54,13 @@ function CaptureShell({
   showUser,
   initialText,
   initialSkill,
+  sourceArtifactId,
 }: {
   getToken: () => Promise<string | null>;
   showUser: boolean;
   initialText: string;
   initialSkill: SkillChoice;
+  sourceArtifactId?: string;
 }) {
   const [text, setText] = useState(initialText);
   const [skill, setSkill] = useState<SkillChoice>(initialSkill);
@@ -69,6 +72,7 @@ function CaptureShell({
       const token = await getToken();
       const body: Record<string, string> = { text: submitText.trim(), tier: "free" };
       if (submitSkill !== "auto") body.skill_name = submitSkill;
+      if (sourceArtifactId) body.source_artifact_id = sourceArtifactId;
       const res = await fetch(`${API_URL}/api/v1/captures/transform`, {
         method: "POST",
         headers: {
@@ -378,8 +382,13 @@ function TagConfirm({
         </>
       )}
 
-      <button type="button" style={styles.tagSaveButton} onClick={save}>
-        {tags.length > 0 ? `Save ${tags.length} tag${tags.length !== 1 ? "s" : ""} →` : "Save →"}
+      <button
+        type="button"
+        style={{ ...styles.tagSaveButton, opacity: tags.length === 0 ? 0.4 : 1 }}
+        disabled={tags.length === 0}
+        onClick={save}
+      >
+        {tags.length > 0 ? `Save ${tags.length} tag${tags.length !== 1 ? "s" : ""} →` : "Add at least one tag"}
       </button>
     </div>
   );
