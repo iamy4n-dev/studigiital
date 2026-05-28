@@ -19,6 +19,7 @@ class Artifact(Base):
     artifact_type: Mapped[str] = mapped_column(String)
     content: Mapped[dict[str, Any]] = mapped_column(JSONB)
     tags: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    status: Mapped[str] = mapped_column(String(20), default="draft")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

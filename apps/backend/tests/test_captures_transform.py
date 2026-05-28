@@ -299,6 +299,31 @@ async def test_transform_with_invalid_source_artifact_id_returns_404(
 
 
 @pytest.mark.asyncio
+async def test_transform_creates_artifact_with_draft_status(mock_backend: LLMBackend) -> None:
+    from app.models.artifact import Artifact
+
+    captured_artifacts: list[Artifact] = []
+    mock_session = _make_mock_session()
+    mock_session.add = MagicMock(
+        side_effect=lambda obj: captured_artifacts.append(obj) if isinstance(obj, Artifact) else None
+    )
+
+    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_session] = _session_override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(
+            "/api/v1/captures/transform",
+            json={"text": "Photosynthesis is the process plants use to make food from sunlight."},
+        )
+
+    assert len(captured_artifacts) == 1
+    assert captured_artifacts[0].status == "draft"
+
+
+@pytest.mark.asyncio
 async def test_transform_returns_quiz_schema_when_inferred() -> None:
     quiz_backend = _make_backend(
         {"skill_name": "generate_quiz", "confidence": 0.85},

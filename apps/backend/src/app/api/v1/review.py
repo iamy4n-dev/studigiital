@@ -66,7 +66,7 @@ async def get_queue(
     matching = [
         (item, a, c)
         for item, a, c in all_triples
-        if isinstance(a.tags, list) and any(t in a.tags for t in tag_list)
+        if a.status == "tagged" and isinstance(a.tags, list) and any(t in a.tags for t in tag_list)
     ]
 
     reviewed_ids_stmt = select(ReviewEvent.item_id).where(

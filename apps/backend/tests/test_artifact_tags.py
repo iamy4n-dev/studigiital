@@ -20,6 +20,7 @@ def _make_artifact(artifact_id: str = "art-1") -> tuple[MagicMock, MagicMock]:
     artifact.artifact_type = "generate_flashcard"
     artifact.content = {"cards": [{"front": "Q", "back": "A"}]}
     artifact.created_at = datetime.now(UTC)
+    artifact.status = "draft"
 
     capture = MagicMock()
     capture.id = "cap-1"
@@ -99,6 +100,22 @@ async def test_set_artifact_tags_rejects_empty_list() -> None:
         response = await client.put("/api/v1/artifacts/art-1/tags", json=[])
 
     assert response.status_code == 422
+
+
+async def test_set_artifact_tags_flips_status_to_tagged(mock_session: AsyncSession) -> None:
+    artifact, capture = _make_artifact()
+    result_row = MagicMock()
+    result_row.one_or_none.return_value = (artifact, capture)
+    mock_session.execute = AsyncMock(return_value=result_row)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.put(
+            "/api/v1/artifacts/art-1/tags",
+            json=["biology"],
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "tagged"
 
 
 async def test_artifact_response_includes_tags_after_set(mock_session: AsyncSession) -> None:
