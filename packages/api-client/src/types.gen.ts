@@ -105,6 +105,7 @@ export type outcome = 'passed' | 'failed';
 
 export type RecordEventResponse = {
     id: string;
+    xp_gained: number;
 };
 
 export type SuggestTagsRequest = {

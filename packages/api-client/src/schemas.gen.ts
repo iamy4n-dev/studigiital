@@ -400,10 +400,14 @@ export const RecordEventResponseSchema = {
         id: {
             type: 'string',
             title: 'Id'
+        },
+        xp_gained: {
+            type: 'integer',
+            title: 'Xp Gained'
         }
     },
     type: 'object',
-    required: ['id'],
+    required: ['id', 'xp_gained'],
     title: 'RecordEventResponse'
 } as const;
 
