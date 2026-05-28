@@ -34,6 +34,11 @@ export const ArtifactOutSchema = {
             type: 'array',
             title: 'Tags',
             default: []
+        },
+        status: {
+            type: 'string',
+            title: 'Status',
+            default: 'draft'
         }
     },
     type: 'object',

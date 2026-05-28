@@ -19,6 +19,7 @@ def _make_item(
     item_type: str,
     content: dict,
     tags: list[str],
+    status: str = "tagged",
 ) -> tuple[MagicMock, MagicMock, MagicMock]:
     item = MagicMock()
     item.id = item_id
@@ -30,6 +31,7 @@ def _make_item(
     artifact = MagicMock()
     artifact.id = artifact_id
     artifact.tags = tags
+    artifact.status = status
 
     capture = MagicMock()
     capture.user_id = "test-user"
@@ -298,3 +300,36 @@ async def test_record_event_invalid_outcome_returns_422() -> None:
         )
 
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Slice 9 — draft artifacts are excluded from the drill queue
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_queue_excludes_draft_artifacts() -> None:
+    tagged_item, tagged_art, tagged_cap = _make_item(
+        "item-tagged", "art-tagged", "flashcard",
+        {"front": "Q", "back": "A"}, ["biology"], status="tagged",
+    )
+    draft_item, draft_art, draft_cap = _make_item(
+        "item-draft", "art-draft", "flashcard",
+        {"front": "Q2", "back": "A2"}, ["biology"], status="draft",
+    )
+    mock_session = _make_session(
+        [(tagged_item, tagged_art, tagged_cap), (draft_item, draft_art, draft_cap)]
+    )
+
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_session] = _override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/review/queue?tags=biology&mode=structured")
+
+    assert response.status_code == 200
+    ids = [i["id"] for i in response.json()["items"]]
+    assert "item-tagged" in ids
+    assert "item-draft" not in ids

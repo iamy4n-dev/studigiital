@@ -10,6 +10,7 @@ export type ArtifactOut = {
     created_at: string;
     source_text: string;
     tags?: Array<(string)>;
+    status?: string;
 };
 
 export type CaptureCreate = {

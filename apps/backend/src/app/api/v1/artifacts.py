@@ -26,6 +26,7 @@ class ArtifactOut(BaseModel):
     created_at: str
     source_text: str
     tags: list[str] = []
+    status: str = "draft"
 
 
 def _artifact_out(a: Artifact, c: Capture) -> ArtifactOut:
@@ -37,6 +38,7 @@ def _artifact_out(a: Artifact, c: Capture) -> ArtifactOut:
         created_at=a.created_at.isoformat(),
         source_text=c.raw_content or "",
         tags=a.tags if isinstance(a.tags, list) else [],
+        status=a.status,
     )
 
 
@@ -85,5 +87,6 @@ async def set_artifact_tags(
         raise HTTPException(status_code=404, detail="Artifact not found")
     artifact, capture = result
     artifact.tags = tag_names
+    artifact.status = "tagged"
     await session.commit()
     return _artifact_out(artifact, capture)

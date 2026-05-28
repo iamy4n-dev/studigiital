@@ -20,6 +20,7 @@ def _make_mock_artifact_row(raw_content: str) -> tuple[MagicMock, MagicMock]:
     artifact.artifact_type = "generate_flashcard"
     artifact.content = {"cards": [{"front": "Q", "back": "A"}]}
     artifact.created_at = datetime.now(UTC)
+    artifact.status = "draft"
 
     capture = MagicMock()
     capture.id = "cap-1"
@@ -69,3 +70,13 @@ async def test_list_artifacts_includes_tags() -> None:
     body = response.json()
     assert "tags" in body[0]
     assert isinstance(body[0]["tags"], list)
+
+
+@pytest.mark.asyncio
+async def test_list_artifacts_includes_status() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/artifacts/")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body[0]["status"] == "draft"

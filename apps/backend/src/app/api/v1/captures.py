@@ -179,6 +179,7 @@ async def transform_capture(
         capture_id=capture.id,
         artifact_type=skill_name,
         content=result.model_dump(),
+        status="draft",
     )
     session.add(artifact)
     await session.flush()
