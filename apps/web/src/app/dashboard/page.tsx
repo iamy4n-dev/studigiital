@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth, UserButton } from "@clerk/nextjs";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/skills";
 import { buildCaptureUrl } from "@/lib/captureUrl";
