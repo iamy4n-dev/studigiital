@@ -29,11 +29,13 @@ const makeArtifact = (id: string, status: string, type = "generate_flashcard") =
   status,
 });
 
-function mockFetch(artifacts: object[]) {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    json: async () => artifacts,
-  } as Response);
+function mockFetch(artifacts: object[], suggestions: string[] = []) {
+  global.fetch = jest.fn().mockImplementation((url: string) => {
+    if (typeof url === "string" && url.includes("suggest-tags")) {
+      return Promise.resolve({ ok: true, json: async () => ({ suggestions }) } as Response);
+    }
+    return Promise.resolve({ ok: true, json: async () => artifacts } as Response);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -76,6 +78,47 @@ test("clicking Tag me reveals tag input and confirm button", async () => {
   await waitFor(() => screen.getByText("Tag me"));
   fireEvent.click(screen.getByText("Tag me"));
 
-  expect(screen.getByPlaceholderText(/add tags/i)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /save tags/i })).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByPlaceholderText(/add tags/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save tags/i })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Slice 7 — no suggestion fetch when artifact already has committed tags
+// ---------------------------------------------------------------------------
+
+test("clicking Tag me on already-tagged draft does not fetch suggestions", async () => {
+  const artifact = { ...makeArtifact("draft-tagged", "draft"), tags: ["existing"] };
+  mockFetch([artifact], ["should-not-appear"]);
+
+  render(<ArtifactList getToken={noToken} />);
+
+  await waitFor(() => screen.getByText("Tag me"));
+  fireEvent.click(screen.getByText("Tag me"));
+
+  const input = screen.getByPlaceholderText(/add tags/i);
+  // Give async fetch a chance to run (it shouldn't)
+  await new Promise((r) => setTimeout(r, 50));
+  expect(input).toHaveValue("");
+  const calls = (global.fetch as jest.Mock).mock.calls as [string][];
+  const suggestCalls = calls.filter(([url]) => url.includes("suggest-tags"));
+  expect(suggestCalls).toHaveLength(0);
+});
+
+// ---------------------------------------------------------------------------
+// Slice 6 — clicking Tag me on tagless draft pre-populates suggestions
+// ---------------------------------------------------------------------------
+
+test("clicking Tag me on tagless draft pre-populates input with suggestions", async () => {
+  mockFetch([makeArtifact("draft-1", "draft")], ["biology", "photosynthesis"]);
+
+  render(<ArtifactList getToken={noToken} />);
+
+  await waitFor(() => screen.getByText("Tag me"));
+  fireEvent.click(screen.getByText("Tag me"));
+
+  await waitFor(() => {
+    expect(screen.getByPlaceholderText(/add tags/i)).toHaveValue("biology, photosynthesis");
+  });
 });

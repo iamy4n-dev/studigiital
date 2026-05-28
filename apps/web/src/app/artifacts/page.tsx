@@ -124,6 +124,25 @@ function ArtifactCard({
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
 
+  async function expandWithSuggestions() {
+    setExpanded(true);
+    if (artifact.tags.length === 0 && artifact.source_text) {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/api/v1/captures/suggest-tags`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ text: artifact.source_text, existing_tags: [] }),
+      });
+      if (res.ok) {
+        const data = await res.json() as { suggestions: string[] };
+        setTagInput(data.suggestions.join(", "));
+      }
+    }
+  }
+
   const preview = getPreview(artifact);
   const badge = BADGE_LABELS[artifact.artifact_type] ?? artifact.artifact_type;
   const date = new Date(artifact.created_at).toLocaleString(undefined, {
@@ -171,7 +190,7 @@ function ArtifactCard({
             {badge}
           </span>
           {artifact.status === "draft" && (
-            <button style={styles.tagMeBadge} onClick={() => setExpanded((v) => !v)}>
+            <button style={styles.tagMeBadge} onClick={() => expanded ? setExpanded(false) : expandWithSuggestions()}>
               Tag me
             </button>
           )}
