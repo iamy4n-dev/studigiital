@@ -32,16 +32,16 @@ export function AppNav({
           )
         )}
       </nav>
-      {rightSlot}
+      <div style={s.right}>{rightSlot}</div>
     </header>
   );
 }
 
 const s: Record<string, React.CSSProperties> = {
   header: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "1fr auto 1fr",
     alignItems: "center",
-    justifyContent: "space-between",
     padding: "1rem 1.5rem",
     borderBottom: "1px solid #eee",
     background: "#fff",
@@ -63,5 +63,10 @@ const s: Record<string, React.CSSProperties> = {
     color: "#666",
     textDecoration: "none",
     fontWeight: 500,
+  },
+  right: {
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
   },
 };
