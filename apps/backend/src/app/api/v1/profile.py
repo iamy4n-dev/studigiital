@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import UserClaims, get_current_user
@@ -121,7 +121,7 @@ async def get_mastery(user: CurrentUser, session: SessionDep) -> MasteryResponse
         select(func.date_trunc("day", ReviewEvent.reviewed_at).label("day"))
         .where(ReviewEvent.user_id == user.user_id)
         .distinct()
-        .order_by(func.date_trunc("day", ReviewEvent.reviewed_at).desc())
+        .order_by(literal_column("day").desc())
     )
     streak_rows = (await session.execute(streak_stmt)).all()
     streak_days = _compute_streak([row[0] for row in streak_rows])
