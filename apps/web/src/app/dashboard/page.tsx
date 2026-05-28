@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/skills";
@@ -21,21 +21,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 export default function DashboardPage() {
-  return DEV_MODE ? <Dashboard getToken={async () => null} showUser={false} /> : <AuthDashboard />;
+  return DEV_MODE ? <Dashboard getToken={async () => null} /> : <AuthDashboard />;
 }
 
 function AuthDashboard() {
   const { getToken } = useAuth();
-  return <Dashboard getToken={getToken} showUser />;
+  return <Dashboard getToken={getToken} />;
 }
 
-function Dashboard({
-  getToken,
-  showUser,
-}: {
-  getToken: () => Promise<string | null>;
-  showUser: boolean;
-}) {
+function Dashboard({ getToken }: { getToken: () => Promise<string | null> }) {
   const [artifacts, setArtifacts] = useState<ArtifactOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +55,7 @@ function Dashboard({
 
   return (
     <div style={styles.shell}>
-      <AppNav active="dashboard" rightSlot={showUser ? <UserButton /> : undefined} />
+      <AppNav active="dashboard" />
 
       <main style={styles.main}>
         {/* Stats bar */}

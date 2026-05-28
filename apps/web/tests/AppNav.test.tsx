@@ -5,6 +5,10 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { AppNav } from "../src/components/AppNav";
 
+jest.mock("@clerk/nextjs", () => ({
+  UserButton: () => <span data-testid="user-button" />,
+}));
+
 jest.mock("next/link", () => {
   const Link = ({ href, children, ...props }: { href: string; children: React.ReactNode; [key: string]: unknown }) =>
     React.createElement("a", { href, ...props }, children);
@@ -35,10 +39,10 @@ test("active page renders as span not link", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Slice 3 — rightSlot content is rendered
+// Slice 3 — UserButton is always rendered in the header
 // ---------------------------------------------------------------------------
 
-test("rightSlot is rendered inside the header", () => {
-  render(<AppNav active="dashboard" rightSlot={<button>Settings</button>} />);
-  expect(screen.getByText("Settings")).toBeInTheDocument();
+test("UserButton is rendered in the header", () => {
+  render(<AppNav active="dashboard" />);
+  expect(screen.getByTestId("user-button")).toBeInTheDocument();
 });

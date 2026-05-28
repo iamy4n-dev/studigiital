@@ -1,5 +1,6 @@
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import React from "react";
 
@@ -13,13 +14,9 @@ const NAV_ITEMS: { label: string; href: string; key: ActivePage }[] = [
   { label: "Profile", href: "/profile", key: "profile" },
 ];
 
-export function AppNav({
-  active,
-  rightSlot,
-}: {
-  active: ActivePage;
-  rightSlot?: React.ReactNode;
-}) {
+const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
+
+export function AppNav({ active }: { active: ActivePage }) {
   return (
     <header style={s.header}>
       <Link href="/dashboard" style={s.logo}>Studigital</Link>
@@ -32,7 +29,7 @@ export function AppNav({
           )
         )}
       </nav>
-      <div style={s.right}>{rightSlot}</div>
+      <div style={s.right}>{!DEV_MODE && <UserButton />}</div>
     </header>
   );
 }

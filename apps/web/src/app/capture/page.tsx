@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { AppNav } from "@/components/AppNav";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -39,7 +39,7 @@ function CaptureEntry() {
   const sourceArtifactId = searchParams.get("source_artifact_id") ?? undefined;
 
   return DEV_MODE ? (
-    <CaptureShell getToken={async () => null} showUser={false} initialText={initialText} initialSkill={initialSkill} sourceArtifactId={sourceArtifactId} />
+    <CaptureShell getToken={async () => null} initialText={initialText} initialSkill={initialSkill} sourceArtifactId={sourceArtifactId} />
   ) : (
     <AuthCapturePage initialText={initialText} initialSkill={initialSkill} sourceArtifactId={sourceArtifactId} />
   );
@@ -47,18 +47,16 @@ function CaptureEntry() {
 
 function AuthCapturePage({ initialText, initialSkill, sourceArtifactId }: { initialText: string; initialSkill: SkillChoice; sourceArtifactId?: string }) {
   const { getToken } = useAuth();
-  return <CaptureShell getToken={getToken} showUser initialText={initialText} initialSkill={initialSkill} sourceArtifactId={sourceArtifactId} />;
+  return <CaptureShell getToken={getToken} initialText={initialText} initialSkill={initialSkill} sourceArtifactId={sourceArtifactId} />;
 }
 
 function CaptureShell({
   getToken,
-  showUser,
   initialText,
   initialSkill,
   sourceArtifactId,
 }: {
   getToken: () => Promise<string | null>;
-  showUser: boolean;
   initialText: string;
   initialSkill: SkillChoice;
   sourceArtifactId?: string;
@@ -114,7 +112,7 @@ function CaptureShell({
 
   return (
     <div style={styles.shell}>
-      <AppNav active="capture" rightSlot={showUser ? <UserButton /> : undefined} />
+      <AppNav active="capture" />
       {DEV_MODE && (
         <div style={styles.devBar}>
           <a href="/skill-test" style={styles.devLink}>Skill Tester ↗</a>

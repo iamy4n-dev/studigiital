@@ -7,6 +7,7 @@ import { ProfilePage } from "../src/components/ProfilePage";
 
 jest.mock("@clerk/nextjs", () => ({
   useAuth: () => ({ getToken: async () => null }),
+  UserButton: () => null,
 }));
 
 jest.mock("next/link", () => {
