@@ -81,7 +81,13 @@ export function ProfilePage({ getToken }: { getToken: () => Promise<string | nul
             <section>
               <h2 style={s.sectionHeading}>This week</h2>
               <p style={s.activityLine}>
-                {data.activity.mistakes_resolved_this_week} mistakes resolved
+                {data.activity.mistakes_resolved_this_week} mistakes resolved{" "}
+                <span
+                  title="Items you had trouble with at some point, resolved this week."
+                  style={s.hint}
+                >
+                  (i)
+                </span>
               </p>
               <p style={s.activityLine}>
                 {data.activity.tags_improved_this_week} tags improved
@@ -169,4 +175,5 @@ const s: Record<string, React.CSSProperties> = {
   barWrap: { flex: 1, height: 6, background: "#f3f4f6", borderRadius: 999, overflow: "hidden" },
   barFill: { height: "100%", borderRadius: 999, transition: "width 0.3s ease" },
   pct: { fontSize: "0.8125rem", fontWeight: 600, color: "#6b7280", minWidth: 36, textAlign: "right" as const },
+  hint: { fontSize: "0.75rem", color: "#9ca3af", cursor: "default" },
 };
