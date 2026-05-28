@@ -270,10 +270,21 @@ function DrillView({
     }
   }
 
-  function advance(outcome: "passed" | "failed") {
+  function rate(outcome: "passed" | "failed") {
+    const current = activeQueue[0];
+    if (!current) return;
+    if (outcome === "failed") {
+      setWeakSpots((prev) => new Set([...prev, current.id]));
+    }
+    recordEvent(current.id, outcome).then((xp) => {
+      if (xp > 0) setXpGained(xp);
+    });
+  }
+
+  function next(outcome: "passed" | "failed") {
     const [current, ...rest] = activeQueue;
     if (!current) return;
-
+    setXpGained(0);
     if (outcome === "passed") {
       setLearnedCount((c) => c + 1);
       if (rest.length === 0) {
@@ -282,13 +293,8 @@ function DrillView({
         setActiveQueue(rest);
       }
     } else {
-      setWeakSpots((prev) => new Set([...prev, current.id]));
       setActiveQueue([...rest, current]);
     }
-
-    recordEvent(current.id, outcome).then((xp) => {
-      if (xp > 0) setXpGained(xp);
-    });
   }
 
   function handleRetry() {
@@ -356,7 +362,7 @@ function DrillView({
           <button type="button" style={s.exitBtn} onClick={onExit}>← Exit</button>
           <span style={s.progress}>{learnedCount} / {totalCount} learned</span>
         </div>
-        <ArtifactCard item={artifact} onRate={advance} />
+        <ArtifactCard item={artifact} onRate={rate} onNext={next} />
       </main>
       {xpGained > 0 && <XpToast xp={xpGained} onDone={() => setXpGained(0)} />}
     </div>

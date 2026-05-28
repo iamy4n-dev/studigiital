@@ -12,37 +12,33 @@ export interface DrillItem {
   source_text: string;
 }
 
-export function ArtifactCard({
-  item,
-  onRate,
-}: {
+interface CardProps {
   item: DrillItem;
   onRate: (outcome: "passed" | "failed") => void;
-}) {
-  if (item.item_type === "flashcard") {
-    return <FlashcardCard item={item} onRate={onRate} />;
-  }
-  if (item.item_type === "quiz_question") {
-    return <QuizCard item={item} onRate={onRate} />;
-  }
-  return <NoteCard item={item} onRate={onRate} />;
+  onNext: (outcome: "passed" | "failed") => void;
 }
 
-export function FlashcardCard({
-  item,
-  onRate,
-}: {
-  item: DrillItem;
-  onRate: (outcome: "passed" | "failed") => void;
-}) {
+export function ArtifactCard({ item, onRate, onNext }: CardProps) {
+  if (item.item_type === "flashcard") return <FlashcardCard item={item} onRate={onRate} onNext={onNext} />;
+  if (item.item_type === "quiz_question") return <QuizCard item={item} onRate={onRate} onNext={onNext} />;
+  return <NoteCard item={item} onRate={onRate} onNext={onNext} />;
+}
+
+export function FlashcardCard({ item, onRate, onNext }: CardProps) {
   const [flipped, setFlipped] = useState(false);
+  const [outcome, setOutcome] = useState<"passed" | "failed" | null>(null);
   const front = item.content.front as string | undefined;
   const back = item.content.back as string | undefined;
 
   const itemId = item.id;
-  useEffect(() => { setFlipped(false); }, [itemId]);
+  useEffect(() => { setFlipped(false); setOutcome(null); }, [itemId]);
 
   if (!front || !back) return null;
+
+  function handleRate(o: "passed" | "failed") {
+    setOutcome(o);
+    onRate(o);
+  }
 
   return (
     <div style={s.card}>
@@ -52,13 +48,22 @@ export function FlashcardCard({
         <button type="button" style={s.flipBtn} onClick={() => setFlipped(true)}>
           Reveal answer
         </button>
-      ) : (
+      ) : outcome === null ? (
         <div style={s.rateRow}>
-          <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534" }} onClick={() => onRate("passed")}>
+          <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534" }} onClick={() => handleRate("passed")}>
             Got it
           </button>
-          <button type="button" style={{ ...s.rateBtn, background: "#fee2e2", color: "#991b1b" }} onClick={() => onRate("failed")}>
+          <button type="button" style={{ ...s.rateBtn, background: "#fee2e2", color: "#991b1b" }} onClick={() => handleRate("failed")}>
             Not yet
+          </button>
+        </div>
+      ) : (
+        <div style={s.rateRow}>
+          <span style={{ ...s.ratedLabel, color: outcome === "passed" ? "#166534" : "#991b1b", background: outcome === "passed" ? "#dcfce7" : "#fee2e2" }}>
+            {outcome === "passed" ? "Got it ✓" : "Not yet"}
+          </span>
+          <button type="button" style={s.nextBtn} onClick={() => onNext(outcome)}>
+            Next →
           </button>
         </div>
       )}
@@ -66,26 +71,28 @@ export function FlashcardCard({
   );
 }
 
-export function QuizCard({
-  item,
-  onRate,
-}: {
-  item: DrillItem;
-  onRate: (outcome: "passed" | "failed") => void;
-}) {
+export function QuizCard({ item, onRate, onNext }: CardProps) {
   const [selected, setSelected] = useState<number | null>(null);
+  const [rated, setRated] = useState(false);
   const stem = item.content.stem as string | undefined;
   const options = item.content.options as string[] | undefined;
   const correctIndex = item.content.correct_index as number | undefined;
   const explanation = item.content.explanation as string | undefined;
 
   const itemId = item.id;
-  useEffect(() => setSelected(null), [itemId]);
+  useEffect(() => { setSelected(null); setRated(false); }, [itemId]);
 
   if (!stem || !options || correctIndex === undefined) return null;
 
   const answered = selected !== null;
   const correct = selected === correctIndex;
+
+  function handleSelect(i: number) {
+    if (rated) return;
+    setSelected(i);
+    setRated(true);
+    onRate(i === correctIndex ? "passed" : "failed");
+  }
 
   return (
     <div style={s.card}>
@@ -104,14 +111,10 @@ export function QuizCard({
               key={i}
               type="button"
               disabled={answered}
-              onClick={() => setSelected(i)}
+              onClick={() => handleSelect(i)}
               style={{
-                padding: "0.6rem 0.875rem",
-                borderRadius: 8,
-                border: `1.5px solid ${border}`,
-                background: bg,
-                textAlign: "left",
-                fontSize: "0.9375rem",
+                padding: "0.6rem 0.875rem", borderRadius: 8, border: `1.5px solid ${border}`,
+                background: bg, textAlign: "left", fontSize: "0.9375rem",
                 cursor: answered ? "default" : "pointer",
               }}
             >
@@ -125,7 +128,7 @@ export function QuizCard({
           <p style={{ fontSize: "0.875rem", color: correct ? "#166534" : "#991b1b", margin: 0 }}>
             {correct ? "Correct — " : "Not quite — "}{explanation}
           </p>
-          <button type="button" style={s.nextBtn} onClick={() => onRate(correct ? "passed" : "failed")}>
+          <button type="button" style={s.nextBtn} onClick={() => onNext(correct ? "passed" : "failed")}>
             Next →
           </button>
         </>
@@ -134,29 +137,43 @@ export function QuizCard({
   );
 }
 
-export function NoteCard({
-  item,
-  onRate,
-}: {
-  item: DrillItem;
-  onRate: (outcome: "passed" | "failed") => void;
-}) {
+export function NoteCard({ item, onRate, onNext }: CardProps) {
+  const [outcome, setOutcome] = useState<"passed" | "failed" | null>(null);
   const title = item.content.title as string | undefined;
   const body = item.content.body_markdown as string | undefined;
+
+  const itemId = item.id;
+  useEffect(() => setOutcome(null), [itemId]);
+
+  function handleRate(o: "passed" | "failed") {
+    setOutcome(o);
+    onRate(o);
+  }
 
   return (
     <div style={s.card}>
       <span style={s.typeBadge}>Note</span>
       {title && <p style={{ ...s.cardBody, fontWeight: 700 }}>{title}</p>}
       {body && <MarkdownContent>{body}</MarkdownContent>}
-      <div style={s.rateRow}>
-        <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534" }} onClick={() => onRate("passed")}>
-          Got it
-        </button>
-        <button type="button" style={{ ...s.rateBtn, background: "#fee2e2", color: "#991b1b" }} onClick={() => onRate("failed")}>
-          Not yet
-        </button>
-      </div>
+      {outcome === null ? (
+        <div style={s.rateRow}>
+          <button type="button" style={{ ...s.rateBtn, background: "#dcfce7", color: "#166534" }} onClick={() => handleRate("passed")}>
+            Got it
+          </button>
+          <button type="button" style={{ ...s.rateBtn, background: "#fee2e2", color: "#991b1b" }} onClick={() => handleRate("failed")}>
+            Not yet
+          </button>
+        </div>
+      ) : (
+        <div style={s.rateRow}>
+          <span style={{ ...s.ratedLabel, color: outcome === "passed" ? "#166534" : "#991b1b", background: outcome === "passed" ? "#dcfce7" : "#fee2e2" }}>
+            {outcome === "passed" ? "Got it ✓" : "Not yet"}
+          </span>
+          <button type="button" style={s.nextBtn} onClick={() => onNext(outcome)}>
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -179,6 +196,10 @@ const s: Record<string, React.CSSProperties> = {
   rateBtn: {
     flex: 1, padding: "0.6rem", borderRadius: 8, border: "none",
     fontSize: "0.9375rem", fontWeight: 700, cursor: "pointer",
+  },
+  ratedLabel: {
+    flex: 1, padding: "0.6rem", borderRadius: 8, fontSize: "0.9375rem",
+    fontWeight: 700, textAlign: "center" as const,
   },
   nextBtn: {
     flex: 1, padding: "0.6rem", borderRadius: 8, border: "1.5px solid #1a1a1a",
