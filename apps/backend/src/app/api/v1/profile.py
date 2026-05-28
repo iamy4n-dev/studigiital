@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -11,13 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import UserClaims, get_current_user
 from app.core.db import get_session
-
-CurrentUser = Annotated[UserClaims, Depends(get_current_user)]
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
 from app.models.artifact import Artifact
 from app.models.artifact_item import ArtifactItem
 from app.models.capture import Capture
 from app.models.review_event import ReviewEvent
+
+CurrentUser = Annotated[UserClaims, Depends(get_current_user)]
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 router = APIRouter()
 
