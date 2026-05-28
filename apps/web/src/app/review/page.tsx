@@ -205,7 +205,7 @@ function DrillSetup({
 // Drill view
 // ---------------------------------------------------------------------------
 
-function DrillView({
+export function DrillView({
   getToken,
   config,
   onExit,
@@ -223,6 +223,7 @@ function DrillView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [xpGained, setXpGained] = useState(0);
+  const [cardKey, setCardKey] = useState(0);
   const tokenRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -285,6 +286,7 @@ function DrillView({
     const [current, ...rest] = activeQueue;
     if (!current) return;
     setXpGained(0);
+    setCardKey((k) => k + 1);
     if (outcome === "passed") {
       setLearnedCount((c) => c + 1);
       if (rest.length === 0) {
@@ -362,7 +364,7 @@ function DrillView({
           <button type="button" style={s.exitBtn} onClick={onExit}>← Exit</button>
           <span style={s.progress}>{learnedCount} / {totalCount} learned</span>
         </div>
-        <ArtifactCard item={artifact} onRate={rate} onNext={next} />
+        <ArtifactCard key={cardKey} item={artifact} onRate={rate} onNext={next} />
       </main>
       {xpGained > 0 && <XpToast xp={xpGained} onDone={() => setXpGained(0)} />}
     </div>
