@@ -17,12 +17,14 @@ export function XpToast({ xp, onDone }: { xp: number; onDone: () => void }) {
 
 const s: Record<string, React.CSSProperties> = {
   overlay: {
-    position: "absolute",
-    inset: 0,
+    position: "fixed",
+    bottom: "2rem",
+    left: 0,
+    right: 0,
     display: "flex",
-    alignItems: "center",
     justifyContent: "center",
     pointerEvents: "none",
+    zIndex: 100,
   },
   badge: {
     fontSize: "1.5rem",
