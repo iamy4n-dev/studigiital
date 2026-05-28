@@ -19,7 +19,8 @@
     ],
     "allowJs": true,
     "noEmit": true,
-    "incremental": true
+    "incremental": true,
+    "types": ["jest", "@testing-library/jest-dom"]
   },
   "include": [
     "**/*.ts",

@@ -6,16 +6,7 @@ import { useEffect, useState } from "react";
 import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/skills";
 import { buildCaptureUrl } from "@/lib/captureUrl";
 import { tagColors } from "@/lib/tagColor";
-
-interface ArtifactOut {
-  id: string;
-  capture_id: string;
-  artifact_type: string;
-  content: Record<string, unknown>;
-  created_at: string;
-  source_text: string;
-  tags: string[];
-}
+import { partitionArtifacts, type ArtifactOut } from "@/lib/artifactPartition";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
@@ -29,7 +20,7 @@ function AuthArtifactList() {
   return <ArtifactList getToken={getToken} />;
 }
 
-function ArtifactList({ getToken }: { getToken: () => Promise<string | null> }) {
+export function ArtifactList({ getToken }: { getToken: () => Promise<string | null> }) {
   const [artifacts, setArtifacts] = useState<ArtifactOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,19 +72,58 @@ function ArtifactList({ getToken }: { getToken: () => Promise<string | null> }) 
           </div>
         )}
 
-        {artifacts !== null && artifacts.length > 0 && (
-          <div style={styles.list}>
-            {artifacts.map((a) => (
-              <ArtifactCard key={a.id} artifact={a} />
-            ))}
-          </div>
-        )}
+        {artifacts !== null && artifacts.length > 0 && (() => {
+          const { drafts, tagged } = partitionArtifacts(artifacts);
+          const handleTagged = (id: string, tags: string[]) => {
+            setArtifacts((prev) =>
+              prev
+                ? prev.map((a) => (a.id === id ? { ...a, status: "tagged", tags } : a))
+                : prev
+            );
+          };
+          return (
+            <>
+              {drafts.length > 0 && (
+                <section>
+                  <h2 style={styles.sectionHeading}>Needs tagging</h2>
+                  <div style={styles.list}>
+                    {drafts.map((a) => (
+                      <ArtifactCard key={a.id} artifact={a} getToken={getToken} onTagged={handleTagged} />
+                    ))}
+                  </div>
+                </section>
+              )}
+              {tagged.length > 0 && (
+                <section>
+                  {drafts.length > 0 && <h2 style={styles.sectionHeading}>Tagged</h2>}
+                  <div style={styles.list}>
+                    {tagged.map((a) => (
+                      <ArtifactCard key={a.id} artifact={a} getToken={getToken} onTagged={handleTagged} />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          );
+        })()}
       </main>
     </div>
   );
 }
 
-function ArtifactCard({ artifact }: { artifact: ArtifactOut }) {
+function ArtifactCard({
+  artifact,
+  getToken,
+  onTagged,
+}: {
+  artifact: ArtifactOut;
+  getToken: () => Promise<string | null>;
+  onTagged: (id: string, tags: string[]) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const preview = getPreview(artifact);
   const badge = BADGE_LABELS[artifact.artifact_type] ?? artifact.artifact_type;
   const date = new Date(artifact.created_at).toLocaleString(undefined, {
@@ -107,12 +137,45 @@ function ArtifactCard({ artifact }: { artifact: ArtifactOut }) {
     ? otherSkills(artifact.artifact_type as SkillName)
     : null;
 
+  async function saveTags() {
+    const tags = tagInput
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (tags.length === 0) return;
+    setSaving(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/api/v1/artifacts/${artifact.id}/tags`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(tags),
+      });
+      if (res.ok) {
+        onTagged(artifact.id, tags);
+        setExpanded(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div style={styles.card}>
       <div style={styles.cardTop}>
-        <span style={{ ...styles.badge, background: BADGE_COLORS[artifact.artifact_type] ?? "#eee" }}>
-          {badge}
-        </span>
+        <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
+          <span style={{ ...styles.badge, background: BADGE_COLORS[artifact.artifact_type] ?? "#eee" }}>
+            {badge}
+          </span>
+          {artifact.status === "draft" && (
+            <button style={styles.tagMeBadge} onClick={() => setExpanded((v) => !v)}>
+              Tag me
+            </button>
+          )}
+        </div>
         <span style={styles.timestamp}>{date}</span>
       </div>
       <p style={styles.preview}>{preview}</p>
@@ -126,6 +189,19 @@ function ArtifactCard({ artifact }: { artifact: ArtifactOut }) {
               </span>
             );
           })}
+        </div>
+      )}
+      {expanded && (
+        <div style={styles.tagForm}>
+          <input
+            style={styles.tagInput}
+            placeholder="Add tags (comma-separated)"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+          />
+          <button style={styles.saveButton} onClick={saveTags} disabled={saving}>
+            Save tags
+          </button>
         </div>
       )}
       {rerunSkills && artifact.source_text && (
@@ -229,6 +305,50 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#1a1a1a",
     fontWeight: 600,
     textDecoration: "none",
+  },
+  tagMeBadge: {
+    fontSize: "0.75rem",
+    fontWeight: 700,
+    letterSpacing: "0.04em",
+    padding: "0.2rem 0.6rem",
+    borderRadius: 999,
+    background: "#fef3c7",
+    color: "#92400e",
+    cursor: "pointer",
+    border: "none",
+  },
+  tagForm: {
+    display: "flex",
+    gap: "0.5rem",
+    alignItems: "center",
+    paddingTop: "0.25rem",
+  },
+  tagInput: {
+    flex: 1,
+    fontSize: "0.875rem",
+    padding: "0.35rem 0.6rem",
+    border: "1.5px solid #d1d5db",
+    borderRadius: 6,
+    outline: "none",
+  },
+  saveButton: {
+    fontSize: "0.8125rem",
+    fontWeight: 600,
+    padding: "0.35rem 0.75rem",
+    borderRadius: 6,
+    border: "none",
+    background: "#1a1a1a",
+    color: "#fff",
+    cursor: "pointer",
+  },
+  sectionHeading: {
+    fontSize: "0.875rem",
+    fontWeight: 600,
+    color: "#6b7280",
+    letterSpacing: "0.05em",
+    textTransform: "uppercase" as const,
+    marginBottom: "0.75rem",
+    marginTop: "1.25rem",
   },
   list: {
     display: "flex",
