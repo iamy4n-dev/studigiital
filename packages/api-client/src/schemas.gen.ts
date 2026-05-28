@@ -103,6 +103,42 @@ export const CaptureOutSchema = {
     title: 'CaptureOut'
 } as const;
 
+export const DrillItemOutSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        artifact_id: {
+            type: 'string',
+            title: 'Artifact Id'
+        },
+        item_type: {
+            type: 'string',
+            title: 'Item Type'
+        },
+        content: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Content'
+        },
+        tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Tags'
+        },
+        source_text: {
+            type: 'string',
+            title: 'Source Text'
+        }
+    },
+    type: 'object',
+    required: ['id', 'artifact_id', 'item_type', 'content', 'tags', 'source_text'],
+    title: 'DrillItemOut'
+} as const;
+
 export const FlashcardPairSchema = {
     properties: {
         front: {
@@ -211,6 +247,29 @@ export const NoteTransformResponseSchema = {
     title: 'NoteTransformResponse'
 } as const;
 
+export const QueueResponseSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/DrillItemOut'
+            },
+            type: 'array',
+            title: 'Items'
+        },
+        new_count: {
+            type: 'integer',
+            title: 'New Count'
+        },
+        reviewed_count: {
+            type: 'integer',
+            title: 'Reviewed Count'
+        }
+    },
+    type: 'object',
+    required: ['items', 'new_count', 'reviewed_count'],
+    title: 'QueueResponse'
+} as const;
+
 export const QuizQuestionSchema = {
     properties: {
         stem: {
@@ -270,6 +329,35 @@ export const QuizTransformResponseSchema = {
     type: 'object',
     required: ['skill_name', 'questions'],
     title: 'QuizTransformResponse'
+} as const;
+
+export const RecordEventRequestSchema = {
+    properties: {
+        item_id: {
+            type: 'string',
+            title: 'Item Id'
+        },
+        outcome: {
+            type: 'string',
+            enum: ['passed', 'failed'],
+            title: 'Outcome'
+        }
+    },
+    type: 'object',
+    required: ['item_id', 'outcome'],
+    title: 'RecordEventRequest'
+} as const;
+
+export const RecordEventResponseSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'RecordEventResponse'
 } as const;
 
 export const SuggestTagsRequestSchema = {

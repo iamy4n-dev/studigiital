@@ -26,6 +26,17 @@ export type CaptureOut = {
     created_at: string;
 };
 
+export type DrillItemOut = {
+    id: string;
+    artifact_id: string;
+    item_type: string;
+    content: {
+        [key: string]: unknown;
+    };
+    tags: Array<(string)>;
+    source_text: string;
+};
+
 export type FlashcardPair = {
     front: string;
     back: string;
@@ -52,6 +63,12 @@ export type NoteTransformResponse = {
     artifact_id?: string;
 };
 
+export type QueueResponse = {
+    items: Array<DrillItemOut>;
+    new_count: number;
+    reviewed_count: number;
+};
+
 export type QuizQuestion = {
     stem: string;
     options: Array<(string)>;
@@ -64,6 +81,17 @@ export type QuizTransformResponse = {
     questions: Array<QuizQuestion>;
     suggested_tags?: Array<(string)>;
     artifact_id?: string;
+};
+
+export type RecordEventRequest = {
+    item_id: string;
+    outcome: 'passed' | 'failed';
+};
+
+export type outcome = 'passed' | 'failed';
+
+export type RecordEventResponse = {
+    id: string;
 };
 
 export type SuggestTagsRequest = {
@@ -168,6 +196,19 @@ export type CreateProfileApiV1UsersProfilePostData = {
 };
 
 export type CreateProfileApiV1UsersProfilePostResponse = (UserProfileOut);
+
+export type GetQueueApiV1ReviewQueueGetData = {
+    mode: 'structured' | 'random';
+    tags: string;
+};
+
+export type GetQueueApiV1ReviewQueueGetResponse = (QueueResponse);
+
+export type RecordEventApiV1ReviewEventsPostData = {
+    requestBody: RecordEventRequest;
+};
+
+export type RecordEventApiV1ReviewEventsPostResponse = (RecordEventResponse);
 
 export type HealthHealthGetResponse = ({
     [key: string]: (string);

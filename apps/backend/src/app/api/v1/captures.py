@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.db import get_session
 from app.core.llm import LLMBackend, get_llm_backend
 from app.models.artifact import Artifact
+from app.models.artifact_item import ArtifactItem
 from app.models.capture import Capture
 from app.skills.generate_flashcard import (
     FlashcardPair,
@@ -180,6 +181,40 @@ async def transform_capture(
         content=result.model_dump(),
     )
     session.add(artifact)
+    await session.flush()
+
+    if isinstance(result, FlashcardTransformResponse):
+        for i, card in enumerate(result.cards):
+            session.add(ArtifactItem(
+                id=str(uuid.uuid4()),
+                artifact_id=artifact_id,
+                item_type="flashcard",
+                content={"front": card.front, "back": card.back},
+                position=i,
+            ))
+    elif isinstance(result, QuizTransformResponse):
+        for i, q in enumerate(result.questions):
+            session.add(ArtifactItem(
+                id=str(uuid.uuid4()),
+                artifact_id=artifact_id,
+                item_type="quiz_question",
+                content={
+                    "stem": q.stem,
+                    "options": q.options,
+                    "correct_index": q.correct_index,
+                    "explanation": q.explanation,
+                },
+                position=i,
+            ))
+    elif isinstance(result, NoteTransformResponse):
+        session.add(ArtifactItem(
+            id=str(uuid.uuid4()),
+            artifact_id=artifact_id,
+            item_type="note",
+            content={"title": result.title, "body_markdown": result.body_markdown},
+            position=0,
+        ))
+
     await session.commit()
 
     result.artifact_id = artifact_id

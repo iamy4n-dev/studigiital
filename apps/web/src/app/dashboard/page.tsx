@@ -65,6 +65,7 @@ function Dashboard({
         <nav style={styles.nav}>
           <span style={{ ...styles.navLink, color: "#1a1a1a", fontWeight: 700 }}>Home</span>
           <Link href="/capture" style={styles.navLink}>Capture</Link>
+          <Link href="/review" style={styles.navLink}>Review</Link>
           <Link href="/artifacts" style={styles.navLink}>History</Link>
         </nav>
         {showUser && <UserButton />}
