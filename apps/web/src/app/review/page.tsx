@@ -222,7 +222,7 @@ export function DrillView({
   const [drillPhase, setDrillPhase] = useState<"drilling" | "complete">("drilling");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [xpGained, setXpGained] = useState(0);
+  const [toastState, setToastState] = useState<{ outcome: "passed" | "failed"; xp: number | null } | null>(null);
   const [cardKey, setCardKey] = useState(0);
   const tokenRef = useRef<string | null>(null);
 
@@ -277,15 +277,16 @@ export function DrillView({
     if (outcome === "failed") {
       setWeakSpots((prev) => new Set([...prev, current.id]));
     }
+    setToastState({ outcome, xp: null });
     recordEvent(current.id, outcome).then((xp) => {
-      if (xp > 0) setXpGained(xp);
+      setToastState((prev) => prev ? { outcome, xp } : null);
     });
   }
 
   function next(outcome: "passed" | "failed") {
     const [current, ...rest] = activeQueue;
     if (!current) return;
-    setXpGained(0);
+    setToastState(null);
     setCardKey((k) => k + 1);
     if (outcome === "passed") {
       setLearnedCount((c) => c + 1);
@@ -366,7 +367,7 @@ export function DrillView({
         </div>
         <ArtifactCard key={cardKey} item={artifact} onRate={rate} onNext={next} />
       </main>
-      {xpGained > 0 && <XpToast xp={xpGained} onDone={() => setXpGained(0)} />}
+      {toastState && <XpToast outcome={toastState.outcome} xp={toastState.xp} onDone={() => setToastState(null)} />}
     </div>
   );
 }

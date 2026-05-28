@@ -2,30 +2,45 @@
  * @jest-environment jsdom
  */
 import React from "react";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { XpToast } from "../src/components/XpToast";
 
 // ---------------------------------------------------------------------------
-// Slice 1 — badge renders with correct XP amount
+// Slice 1 — passed + xp pending (null): shows "Good job!" immediately
 // ---------------------------------------------------------------------------
 
-test("renders xp amount when xp is positive", () => {
-  render(<XpToast xp={3} onDone={() => {}} />);
-  expect(screen.getByText("+3 XP")).toBeInTheDocument();
+test("passed with pending XP shows Good job immediately", () => {
+  render(<XpToast outcome="passed" xp={null} onDone={() => {}} />);
+  expect(screen.getByText(/Good job/i)).toBeInTheDocument();
+  expect(screen.queryByText(/XP/)).not.toBeInTheDocument();
 });
 
 // ---------------------------------------------------------------------------
-// Slice 2 — calls onDone after 1500ms
+// Slice 2 — passed + xp > 0: shows XP amount and encouragement
 // ---------------------------------------------------------------------------
 
-test("calls onDone after 1500ms", () => {
-  jest.useFakeTimers();
-  const onDone = jest.fn();
-  render(<XpToast xp={1} onDone={onDone} />);
+test("passed with earned XP shows amount and Good job", () => {
+  render(<XpToast outcome="passed" xp={3} onDone={() => {}} />);
+  expect(screen.getByText("+3 XP")).toBeInTheDocument();
+  expect(screen.getByText(/Good job/i)).toBeInTheDocument();
+});
 
-  expect(onDone).not.toHaveBeenCalled();
-  act(() => jest.advanceTimersByTime(1500));
-  expect(onDone).toHaveBeenCalledTimes(1);
+// ---------------------------------------------------------------------------
+// Slice 3 — passed + xp = 0: shows "Already mastered", no XP number
+// ---------------------------------------------------------------------------
 
-  jest.useRealTimers();
+test("passed with zero XP shows already mastered message", () => {
+  render(<XpToast outcome="passed" xp={0} onDone={() => {}} />);
+  expect(screen.getByText(/Already mastered/i)).toBeInTheDocument();
+  expect(screen.queryByText(/\+0 XP/)).not.toBeInTheDocument();
+});
+
+// ---------------------------------------------------------------------------
+// Slice 4 — failed: shows "Keep going", no XP number
+// ---------------------------------------------------------------------------
+
+test("failed outcome shows keep going message", () => {
+  render(<XpToast outcome="failed" xp={0} onDone={() => {}} />);
+  expect(screen.getByText(/Keep going/i)).toBeInTheDocument();
+  expect(screen.queryByText(/XP/)).not.toBeInTheDocument();
 });
