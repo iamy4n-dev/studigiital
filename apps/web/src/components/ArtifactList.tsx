@@ -41,6 +41,7 @@ export function ArtifactList({ getToken }: { getToken: () => Promise<string | nu
           <Link href="/capture" style={styles.navLink}>Capture</Link>
           <Link href="/review" style={styles.navLink}>Review</Link>
           <span style={{ ...styles.navLink, color: "#1a1a1a", fontWeight: 700 }}>History</span>
+          <Link href="/profile" style={styles.navLink}>Profile</Link>
         </nav>
       </header>
 

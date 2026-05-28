@@ -591,12 +591,13 @@ function NoteCard({
 // Shared header
 // ---------------------------------------------------------------------------
 
-function Header({ active }: { active: "dashboard" | "capture" | "review" | "history" }) {
+function Header({ active }: { active: "dashboard" | "capture" | "review" | "history" | "profile" }) {
   const navItems = [
     { label: "Home", href: "/dashboard", key: "dashboard" },
     { label: "Capture", href: "/capture", key: "capture" },
     { label: "Review", href: "/review", key: "review" },
     { label: "History", href: "/artifacts", key: "history" },
+    { label: "Profile", href: "/profile", key: "profile" },
   ] as const;
 
   return (

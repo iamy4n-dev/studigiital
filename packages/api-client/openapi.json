@@ -593,6 +593,32 @@
         ]
       }
     },
+    "/api/v1/profile/mastery": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Mastery",
+        "operationId": "get_mastery_api_v1_profile_mastery_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasteryResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -618,6 +644,24 @@
   },
   "components": {
     "schemas": {
+      "ActivitySummary": {
+        "properties": {
+          "mistakes_resolved_this_week": {
+            "type": "integer",
+            "title": "Mistakes Resolved This Week"
+          },
+          "tags_improved_this_week": {
+            "type": "integer",
+            "title": "Tags Improved This Week"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mistakes_resolved_this_week",
+          "tags_improved_this_week"
+        ],
+        "title": "ActivitySummary"
+      },
       "ArtifactOut": {
         "properties": {
           "id": {
@@ -851,6 +895,36 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "MasteryResponse": {
+        "properties": {
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagMastery"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "activity": {
+            "$ref": "#/components/schemas/ActivitySummary"
+          },
+          "streak_days": {
+            "type": "integer",
+            "title": "Streak Days"
+          },
+          "xp": {
+            "type": "integer",
+            "title": "Xp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tags",
+          "activity",
+          "streak_days",
+          "xp"
+        ],
+        "title": "MasteryResponse"
+      },
       "NoteTransformResponse": {
         "properties": {
           "skill_name": {
@@ -1060,6 +1134,39 @@
           "suggestions"
         ],
         "title": "SuggestTagsResponse"
+      },
+      "TagMastery": {
+        "properties": {
+          "tag": {
+            "type": "string",
+            "title": "Tag"
+          },
+          "item_count": {
+            "type": "integer",
+            "title": "Item Count"
+          },
+          "passed_count": {
+            "type": "integer",
+            "title": "Passed Count"
+          },
+          "mastery_pct": {
+            "type": "number",
+            "title": "Mastery Pct"
+          },
+          "above_threshold": {
+            "type": "boolean",
+            "title": "Above Threshold"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tag",
+          "item_count",
+          "passed_count",
+          "mastery_pct",
+          "above_threshold"
+        ],
+        "title": "TagMastery"
       },
       "TagOut": {
         "properties": {
