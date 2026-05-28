@@ -3,7 +3,7 @@
  */
 import React from "react";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { ArtifactList } from "../src/app/artifacts/page";
+import { ArtifactList } from "../src/components/ArtifactList";
 
 jest.mock("@clerk/nextjs", () => ({
   useAuth: () => ({ getToken: async () => null }),

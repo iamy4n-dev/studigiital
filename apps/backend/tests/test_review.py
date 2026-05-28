@@ -310,10 +310,12 @@ async def test_record_event_invalid_outcome_returns_422() -> None:
 @pytest.mark.asyncio
 async def test_queue_excludes_draft_artifacts() -> None:
     tagged_item, tagged_art, tagged_cap = _make_item(
-        "item-tagged", "art-tagged", "flashcard", {"front": "Q", "back": "A"}, ["biology"], status="tagged"
+        "item-tagged", "art-tagged", "flashcard",
+        {"front": "Q", "back": "A"}, ["biology"], status="tagged",
     )
     draft_item, draft_art, draft_cap = _make_item(
-        "item-draft", "art-draft", "flashcard", {"front": "Q2", "back": "A2"}, ["biology"], status="draft"
+        "item-draft", "art-draft", "flashcard",
+        {"front": "Q2", "back": "A2"}, ["biology"], status="draft",
     )
     mock_session = _make_session(
         [(tagged_item, tagged_art, tagged_cap), (draft_item, draft_art, draft_cap)]

@@ -304,9 +304,11 @@ async def test_transform_creates_artifact_with_draft_status(mock_backend: LLMBac
 
     captured_artifacts: list[Artifact] = []
     mock_session = _make_mock_session()
-    mock_session.add = MagicMock(
-        side_effect=lambda obj: captured_artifacts.append(obj) if isinstance(obj, Artifact) else None
-    )
+    def _capture_add(obj: object) -> None:
+        if isinstance(obj, Artifact):
+            captured_artifacts.append(obj)
+
+    mock_session.add = MagicMock(side_effect=_capture_add)
 
     async def _session_override() -> AsyncGenerator[AsyncSession, None]:
         yield mock_session
