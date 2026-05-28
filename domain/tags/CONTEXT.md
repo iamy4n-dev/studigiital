@@ -18,7 +18,8 @@ _Avoid_: tag colors, color scheme
 
 ## Relationships
 
-- An **Artifact** must have at least one **Committed tag**
+- An **Artifact** must have at least one **Committed tag** to leave Draft status
+- Committing at least one tag to a **Draft Artifact** automatically transitions it to `tagged` status
 - **Suggested tags** for a **Derivation** come from the Source artifact's **Committed tags**
 - **Suggested tags** for a new Capture come from the LLM (`SuggestTagsSkill`)
 

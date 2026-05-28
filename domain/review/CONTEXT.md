@@ -9,7 +9,7 @@ The atomic unit of review. One Flashcard, one Quiz Question, or one Note extract
 A closed practice run scoped to one or more user-selected tags. The user works through a fixed set of Artifact Items until every one is passed. Failed Items cycle back to the end of the active queue and are retried until passed. The Drill ends when all Items are learned. The user may exit at any time before completion.
 
 ### Drill Queue
-The server-built ordered list of Artifact Items for a Drill. Two modes:
+The server-built ordered list of Artifact Items for a Drill. Only Items belonging to `tagged` Artifacts are eligible — Draft Artifacts are excluded. Two modes:
 - **Structured** (default) — unreviewed Items first, then oldest-reviewed.
 - **Random** — shuffled. User-selectable on the Review entry screen.
 Failed Items re-enter the queue at the end, not at a random position.
