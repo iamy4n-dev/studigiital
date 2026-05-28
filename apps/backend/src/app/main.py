@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from alembic import command as alembic_command
-from app.api.v1 import artifacts, captures, review, tags, users
+from app.api.v1 import artifacts, captures, profile, review, tags, users
 from app.core.config import settings
 from app.core.db import engine
 
@@ -68,6 +68,7 @@ app.include_router(artifacts.router, prefix="/api/v1/artifacts", tags=["artifact
 app.include_router(tags.router, prefix="/api/v1/tags", tags=["tags"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(review.router, prefix="/api/v1/review", tags=["review"])
+app.include_router(profile.router, prefix="/api/v1/profile", tags=["profile"])
 
 
 @app.get("/health")
