@@ -7,6 +7,7 @@ import { ProfilePage } from "../src/components/ProfilePage";
 
 jest.mock("@clerk/nextjs", () => ({
   useAuth: () => ({ getToken: async () => null }),
+  UserButton: () => null,
 }));
 
 jest.mock("next/link", () => {
@@ -117,5 +118,23 @@ test("streak days and XP are visible", async () => {
   await waitFor(() => {
     expect(screen.getByText(/7/)).toBeInTheDocument();
     expect(screen.getByText(/42/)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Slice 6 — mistakes resolved tooltip
+// ---------------------------------------------------------------------------
+
+test("mistakes resolved has hint icon with tooltip text", async () => {
+  mockMasteryFetch({
+    ...emptyMastery,
+    activity: { mistakes_resolved_this_week: 3, tags_improved_this_week: 0 },
+  });
+
+  render(<ProfilePage getToken={noToken} />);
+
+  await waitFor(() => {
+    const hint = screen.getByTitle(/Items you had trouble with/);
+    expect(hint).toBeInTheDocument();
   });
 });

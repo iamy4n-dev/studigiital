@@ -52,12 +52,15 @@ async def get_mastery(user: CurrentUser, session: SessionDep) -> MasteryResponse
     )
     items_rows = (await session.execute(items_stmt)).all()
 
-    # 2. Item ids that have ever been passed by this user
-    passed_stmt = (
-        select(ReviewEvent.item_id)
-        .where(ReviewEvent.user_id == user.user_id, ReviewEvent.outcome == "passed")
-        .distinct()
+    # 2. Items whose most recent ReviewEvent is 'passed' (last outcome wins)
+    last_event_subq = (
+        select(ReviewEvent.item_id, ReviewEvent.outcome)
+        .where(ReviewEvent.user_id == user.user_id)
+        .distinct(ReviewEvent.item_id)
+        .order_by(ReviewEvent.item_id, ReviewEvent.reviewed_at.desc())
+        .subquery("last_event")
     )
+    passed_stmt = select(last_event_subq.c.item_id).where(last_event_subq.c.outcome == "passed")
     passed_rows = (await session.execute(passed_stmt)).all()
     passed_ids: set[str] = {row[0] for row in passed_rows}
 
@@ -82,21 +85,27 @@ async def get_mastery(user: CurrentUser, session: SessionDep) -> MasteryResponse
             above_threshold=pct >= 80.0,
         ))
 
-    # 3. This-week passed events for items that had a prior failure (mistakes resolved)
+    # 3. Items that passed this week AND have at least one prior failure (mistakes resolved)
     week_start = datetime.now(UTC) - timedelta(days=7)
+    prior_failed_subq = (
+        select(ReviewEvent.item_id)
+        .where(ReviewEvent.user_id == user.user_id, ReviewEvent.outcome == "failed")
+        .distinct()
+        .subquery("prior_failed")
+    )
     week_stmt = (
         select(ReviewEvent.item_id, ReviewEvent.reviewed_at)
         .where(
             ReviewEvent.user_id == user.user_id,
             ReviewEvent.outcome == "passed",
             ReviewEvent.reviewed_at >= week_start,
+            ReviewEvent.item_id.in_(select(prior_failed_subq.c.item_id)),
         )
     )
     week_rows = (await session.execute(week_stmt)).all()
 
-    # Only count items that also appear in passed_ids (have been resolved)
-    # and were passed this week — we count per distinct item to avoid double-counting
-    resolved_this_week: set[str] = {row[0] for row in week_rows if row[0] in passed_ids}
+    # SQL already restricts to items with prior failures — count all distinct items
+    resolved_this_week: set[str] = {row[0] for row in week_rows}
     mistakes_resolved = len(resolved_this_week)
 
     # tags improved = distinct tags that had at least one item resolved this week
@@ -109,10 +118,26 @@ async def get_mastery(user: CurrentUser, session: SessionDep) -> MasteryResponse
         improved_tags.update(item_to_tags.get(item_id, []))
     tags_improved = len(improved_tags)
 
-    # 4. XP = total passed events count
-    xp_stmt = select(func.count()).select_from(ReviewEvent).where(
-        ReviewEvent.user_id == user.user_id,
-        ReviewEvent.outcome == "passed",
+    # 4. XP = SUM(1 + lifetime_failed_count) for items whose last event is 'passed'
+    failed_per_item = (
+        select(
+            ReviewEvent.item_id.label("item_id"),
+            func.count().label("failed_count"),
+        )
+        .where(ReviewEvent.user_id == user.user_id, ReviewEvent.outcome == "failed")
+        .group_by(ReviewEvent.item_id)
+        .subquery("failed_per_item")
+    )
+    xp_stmt = (
+        select(
+            func.coalesce(
+                func.sum(1 + func.coalesce(failed_per_item.c.failed_count, 0)),
+                0,
+            )
+        )
+        .select_from(last_event_subq)
+        .outerjoin(failed_per_item, last_event_subq.c.item_id == failed_per_item.c.item_id)
+        .where(last_event_subq.c.outcome == "passed")
     )
     xp: int = (await session.execute(xp_stmt)).scalar() or 0
 

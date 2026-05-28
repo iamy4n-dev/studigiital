@@ -257,8 +257,19 @@ async def test_queue_multi_tag_returns_union() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _make_event_session() -> AsyncSession:
+def _make_event_session(
+    prev_outcome: str | None = None,
+    prior_failed_count: int = 0,
+) -> AsyncSession:
     session = MagicMock(spec=AsyncSession)
+
+    prev_result = MagicMock()
+    prev_result.first.return_value = (prev_outcome,) if prev_outcome is not None else None
+
+    failed_count_result = MagicMock()
+    failed_count_result.scalar.return_value = prior_failed_count
+
+    session.execute = AsyncMock(side_effect=[prev_result, failed_count_result])
     session.add = MagicMock()
     session.commit = AsyncMock()
     return session
@@ -333,3 +344,99 @@ async def test_queue_excludes_draft_artifacts() -> None:
     ids = [i["id"] for i in response.json()["items"]]
     assert "item-tagged" in ids
     assert "item-draft" not in ids
+
+
+# ---------------------------------------------------------------------------
+# Slice 10 — xp_gained: first-time pass earns 1 XP
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_record_event_first_pass_earns_one_xp() -> None:
+    mock_session = _make_event_session(prev_outcome=None, prior_failed_count=0)
+
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_session] = _override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/review/events",
+            json={"item_id": "item-1", "outcome": "passed"},
+        )
+
+    assert response.status_code == 201
+    assert response.json()["xp_gained"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Slice 11 — xp_gained: pass after 2 failures earns 3 XP (difficulty-weighted)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_record_event_pass_after_failures_earns_difficulty_weighted_xp() -> None:
+    mock_session = _make_event_session(prev_outcome="failed", prior_failed_count=2)
+
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_session] = _override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/review/events",
+            json={"item_id": "item-1", "outcome": "passed"},
+        )
+
+    assert response.status_code == 201
+    assert response.json()["xp_gained"] == 3
+
+
+# ---------------------------------------------------------------------------
+# Slice 12 — xp_gained: re-pass (already passing) earns 0 XP
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_record_event_re_pass_earns_zero_xp() -> None:
+    mock_session = _make_event_session(prev_outcome="passed", prior_failed_count=0)
+
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_session] = _override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/review/events",
+            json={"item_id": "item-1", "outcome": "passed"},
+        )
+
+    assert response.status_code == 201
+    assert response.json()["xp_gained"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Slice 13 — xp_gained: failure always earns 0 XP
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_record_event_failure_earns_zero_xp() -> None:
+    mock_session = _make_event_session()
+
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_session] = _override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/review/events",
+            json={"item_id": "item-1", "outcome": "failed"},
+        )
+
+    assert response.status_code == 201
+    assert response.json()["xp_gained"] == 0

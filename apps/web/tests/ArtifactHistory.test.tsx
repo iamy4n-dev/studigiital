@@ -7,6 +7,7 @@ import { ArtifactList } from "../src/components/ArtifactList";
 
 jest.mock("@clerk/nextjs", () => ({
   useAuth: () => ({ getToken: async () => null }),
+  UserButton: () => null,
 }));
 
 jest.mock("next/link", () => {

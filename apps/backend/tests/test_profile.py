@@ -201,12 +201,12 @@ async def test_mastery_below_threshold_flag() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Slice 5 — xp = total passed events count
+# Slice 5 — xp scalar is returned in the response
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_mastery_xp_equals_total_passed_events() -> None:
+async def test_mastery_xp_exposed_in_response() -> None:
     mock_session = _make_session(item_rows=[], xp=42)
 
     async def _override() -> AsyncGenerator[AsyncSession, None]:
@@ -318,3 +318,33 @@ async def test_mastery_streak_breaks_on_gap() -> None:
         response = await client.get("/api/v1/profile/mastery")
 
     assert response.json()["streak_days"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Slice 9 — mistakes resolved: prior failure required
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_mastery_mistake_resolved_when_currently_failing() -> None:
+    """Item passed this week but last event is failed — still counts as resolved.
+
+    The SQL filters events_this_week to items with prior failures.
+    Python must NOT further restrict to items in passed_ids.
+    """
+    now = datetime.now(UTC)
+    mock_session = _make_session(
+        item_rows=[("item-1", ["biology"])],
+        passed_ids=[],  # last event is failed — not in current passing set
+        events_this_week=[("item-1", now)],  # was passed this week (with prior failure per SQL)
+    )
+
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_session] = _override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/profile/mastery")
+
+    assert response.json()["activity"]["mistakes_resolved_this_week"] == 1

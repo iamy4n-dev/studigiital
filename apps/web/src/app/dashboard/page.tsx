@@ -1,11 +1,12 @@
 "use client";
 
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/skills";
 import { buildCaptureUrl } from "@/lib/captureUrl";
 import { countByType, thisWeekCount } from "@/lib/artifactStats";
+import { AppNav } from "@/components/AppNav";
 
 interface ArtifactOut {
   id: string;
@@ -20,21 +21,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 export default function DashboardPage() {
-  return DEV_MODE ? <Dashboard getToken={async () => null} showUser={false} /> : <AuthDashboard />;
+  return DEV_MODE ? <Dashboard getToken={async () => null} /> : <AuthDashboard />;
 }
 
 function AuthDashboard() {
   const { getToken } = useAuth();
-  return <Dashboard getToken={getToken} showUser />;
+  return <Dashboard getToken={getToken} />;
 }
 
-function Dashboard({
-  getToken,
-  showUser,
-}: {
-  getToken: () => Promise<string | null>;
-  showUser: boolean;
-}) {
+function Dashboard({ getToken }: { getToken: () => Promise<string | null> }) {
   const [artifacts, setArtifacts] = useState<ArtifactOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,16 +55,7 @@ function Dashboard({
 
   return (
     <div style={styles.shell}>
-      <header style={styles.header}>
-        <span style={styles.logo}>Studigital</span>
-        <nav style={styles.nav}>
-          <span style={{ ...styles.navLink, color: "#1a1a1a", fontWeight: 700 }}>Home</span>
-          <Link href="/capture" style={styles.navLink}>Capture</Link>
-          <Link href="/review" style={styles.navLink}>Review</Link>
-          <Link href="/artifacts" style={styles.navLink}>History</Link>
-        </nav>
-        {showUser && <UserButton />}
-      </header>
+      <AppNav active="dashboard" />
 
       <main style={styles.main}>
         {/* Stats bar */}
@@ -229,30 +215,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     background: "#fafafa",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "1rem 1.5rem",
-    borderBottom: "1px solid #eee",
-    background: "#fff",
-  },
-  logo: {
-    fontWeight: 700,
-    fontSize: "1.125rem",
-    letterSpacing: "-0.01em",
-  },
-  nav: {
-    display: "flex",
-    gap: "1.5rem",
-    alignItems: "center",
-  },
-  navLink: {
-    fontSize: "0.9375rem",
-    color: "#666",
-    textDecoration: "none",
-    fontWeight: 500,
   },
   main: {
     flex: 1,
