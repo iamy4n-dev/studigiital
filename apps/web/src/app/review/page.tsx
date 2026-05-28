@@ -1,8 +1,9 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { AppNav } from "@/components/AppNav";
+import { XpToast } from "@/components/XpToast";
 import { MarkdownContent } from "@/lib/MarkdownContent";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -127,7 +128,7 @@ function DrillSetup({
 
   return (
     <div style={s.shell}>
-      <Header active="review" />
+      <AppNav active="review" />
       <main style={s.main}>
         <h1 style={s.heading}>Start a Drill</h1>
 
@@ -229,6 +230,7 @@ function DrillView({
   const [drillPhase, setDrillPhase] = useState<"drilling" | "complete">("drilling");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [xpGained, setXpGained] = useState(0);
   const tokenRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -257,25 +259,31 @@ function DrillView({
     load();
   }, [getToken, config]);
 
-  async function recordEvent(itemId: string, outcome: "passed" | "failed") {
+  async function recordEvent(itemId: string, outcome: "passed" | "failed"): Promise<number> {
     const token = tokenRef.current;
-    await fetch(`${API_URL}/api/v1/review/events`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ item_id: itemId, outcome }),
-    });
+    try {
+      const res = await fetch(`${API_URL}/api/v1/review/events`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ item_id: itemId, outcome }),
+      });
+      if (!res.ok) return 0;
+      const data: { id: string; xp_gained: number } = await res.json();
+      return data.xp_gained;
+    } catch {
+      return 0;
+    }
   }
 
   function advance(outcome: "passed" | "failed") {
     const [current, ...rest] = activeQueue;
     if (!current) return;
-    recordEvent(current.id, outcome);
+
     if (outcome === "passed") {
-      const nextLearned = learnedCount + 1;
-      setLearnedCount(nextLearned);
+      setLearnedCount((c) => c + 1);
       if (rest.length === 0) {
         setDrillPhase("complete");
       } else {
@@ -285,6 +293,10 @@ function DrillView({
       setWeakSpots((prev) => new Set([...prev, current.id]));
       setActiveQueue([...rest, current]);
     }
+
+    recordEvent(current.id, outcome).then((xp) => {
+      if (xp > 0) setXpGained(xp);
+    });
   }
 
   function handleRetry() {
@@ -299,7 +311,7 @@ function DrillView({
   if (loading) {
     return (
       <div style={s.shell}>
-        <Header active="review" />
+        <AppNav active="review" />
         <main style={s.main}><p style={{ color: "#888" }}>Loading…</p></main>
       </div>
     );
@@ -308,7 +320,7 @@ function DrillView({
   if (error) {
     return (
       <div style={s.shell}>
-        <Header active="review" />
+        <AppNav active="review" />
         <main style={s.main}><p style={{ color: "#c00" }}>{error}</p></main>
       </div>
     );
@@ -317,7 +329,7 @@ function DrillView({
   if (originalQueue.length === 0) {
     return (
       <div style={s.shell}>
-        <Header active="review" />
+        <AppNav active="review" />
         <main style={s.main}>
           <p style={{ color: "#666" }}>No artifacts found for the selected topics.</p>
           <button type="button" style={s.exitBtn} onClick={onExit}>← Change topics</button>
@@ -329,7 +341,7 @@ function DrillView({
   if (drillPhase === "complete") {
     return (
       <div style={s.shell}>
-        <Header active="review" />
+        <AppNav active="review" />
         <main style={s.main}>
           <CompletionScreen
             totalCount={totalCount}
@@ -346,13 +358,16 @@ function DrillView({
 
   return (
     <div style={s.shell}>
-      <Header active="review" />
+      <AppNav active="review" />
       <main style={s.main}>
         <div style={s.drillHeader}>
           <button type="button" style={s.exitBtn} onClick={onExit}>← Exit</button>
           <span style={s.progress}>{learnedCount} / {totalCount} learned</span>
         </div>
-        <ArtifactCard item={artifact} onRate={advance} />
+        <div style={{ position: "relative" }}>
+          <ArtifactCard item={artifact} onRate={advance} />
+          {xpGained > 0 && <XpToast xp={xpGained} onDone={() => setXpGained(0)} />}
+        </div>
       </main>
     </div>
   );
@@ -588,50 +603,11 @@ function NoteCard({
 }
 
 // ---------------------------------------------------------------------------
-// Shared header
-// ---------------------------------------------------------------------------
-
-function Header({ active }: { active: "dashboard" | "capture" | "review" | "history" | "profile" }) {
-  const navItems = [
-    { label: "Home", href: "/dashboard", key: "dashboard" },
-    { label: "Capture", href: "/capture", key: "capture" },
-    { label: "Review", href: "/review", key: "review" },
-    { label: "History", href: "/artifacts", key: "history" },
-    { label: "Profile", href: "/profile", key: "profile" },
-  ] as const;
-
-  return (
-    <header style={s.header}>
-      <div style={s.headerInner}>
-        <Link href="/dashboard" style={s.logo}>Studigital</Link>
-        <nav style={s.nav}>
-          {navItems.map(({ label, href, key }) =>
-            key === active ? (
-              <span key={key} style={{ ...s.navLink, color: "#1a1a1a", fontWeight: 700 }}>{label}</span>
-            ) : (
-              <Link key={key} href={href} style={s.navLink}>{label}</Link>
-            )
-          )}
-        </nav>
-      </div>
-    </header>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
 
 const s: Record<string, React.CSSProperties> = {
   shell: { minHeight: "100vh", display: "flex", flexDirection: "column", background: "#fafafa" },
-  header: { borderBottom: "1px solid #eee", background: "#fff" },
-  headerInner: {
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-    maxWidth: 600, width: "100%", margin: "0 auto", padding: "1rem 1rem",
-  },
-  logo: { fontWeight: 700, fontSize: "1.125rem", letterSpacing: "-0.01em", textDecoration: "none", color: "inherit" },
-  nav: { display: "flex", gap: "1.5rem", alignItems: "center" },
-  navLink: { fontSize: "0.9375rem", color: "#666", textDecoration: "none", fontWeight: 500 },
   main: { flex: 1, maxWidth: 600, width: "100%", margin: "0 auto", padding: "2rem 1rem" },
   heading: { fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: "1.5rem" },
   label: { display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#374151", marginBottom: "0.5rem" },

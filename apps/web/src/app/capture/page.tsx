@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth, UserButton } from "@clerk/nextjs";
+import { AppNav } from "@/components/AppNav";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { mapErrorMessage } from "@/lib/errors";
@@ -113,26 +114,12 @@ function CaptureShell({
 
   return (
     <div style={styles.shell}>
-      <header style={styles.header}>
-        <span style={styles.logo}>Studigital</span>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <a href="/dashboard" style={styles.devLink}>
-            Home
-          </a>
-          <a href="/review" style={styles.devLink}>
-            Review
-          </a>
-          <a href="/artifacts" style={styles.devLink}>
-            History
-          </a>
-          {DEV_MODE && (
-            <a href="/skill-test" style={styles.devLink}>
-              Skill Tester
-            </a>
-          )}
-          {showUser && <UserButton />}
+      <AppNav active="capture" rightSlot={showUser ? <UserButton /> : undefined} />
+      {DEV_MODE && (
+        <div style={styles.devBar}>
+          <a href="/skill-test" style={styles.devLink}>Skill Tester ↗</a>
         </div>
-      </header>
+      )}
 
       <main style={styles.main}>
         {phase.status === "idle" ? (
@@ -380,18 +367,11 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
   },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "1rem 1.5rem",
-    borderBottom: "1px solid #eee",
-    background: "#fff",
-  },
-  logo: {
-    fontWeight: 700,
-    fontSize: "1.125rem",
-    letterSpacing: "-0.01em",
+  devBar: {
+    padding: "0.375rem 1.5rem",
+    borderBottom: "1px solid #f3f4f6",
+    background: "#fafafa",
+    fontSize: "0.8125rem",
   },
   main: {
     flex: 1,

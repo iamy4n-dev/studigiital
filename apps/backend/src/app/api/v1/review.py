@@ -5,7 +5,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import UserClaims, get_current_user
@@ -43,6 +43,7 @@ class RecordEventRequest(BaseModel):
 
 class RecordEventResponse(BaseModel):
     id: str
+    xp_gained: int
 
 
 @router.get("/queue", response_model=QueueResponse)
@@ -108,6 +109,32 @@ async def record_event(
     user: CurrentUser,
     session: SessionDep,
 ) -> RecordEventResponse:
+    xp_gained = 0
+
+    if payload.outcome == "passed":
+        # Check the item's last outcome before this review
+        prev_stmt = (
+            select(ReviewEvent.outcome)
+            .where(ReviewEvent.user_id == user.user_id, ReviewEvent.item_id == payload.item_id)
+            .order_by(ReviewEvent.reviewed_at.desc())
+            .limit(1)
+        )
+        prev_row = (await session.execute(prev_stmt)).first()
+        prev_outcome = prev_row[0] if prev_row else None
+
+        if prev_outcome != "passed":
+            failed_count_stmt = (
+                select(func.count())
+                .select_from(ReviewEvent)
+                .where(
+                    ReviewEvent.user_id == user.user_id,
+                    ReviewEvent.item_id == payload.item_id,
+                    ReviewEvent.outcome == "failed",
+                )
+            )
+            failed_count = (await session.execute(failed_count_stmt)).scalar() or 0
+            xp_gained = 1 + failed_count
+
     event_id = str(uuid.uuid4())
     event = ReviewEvent(
         id=event_id,
@@ -117,4 +144,4 @@ async def record_event(
     )
     session.add(event)
     await session.commit()
-    return RecordEventResponse(id=event_id)
+    return RecordEventResponse(id=event_id, xp_gained=xp_gained)

@@ -7,6 +7,7 @@ import { buildCaptureUrl } from "@/lib/captureUrl";
 import { tagColors } from "@/lib/tagColor";
 import { partitionArtifacts, type ArtifactOut } from "@/lib/artifactPartition";
 import { TagConfirm } from "@/lib/TagConfirm";
+import { AppNav } from "@/components/AppNav";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -32,18 +33,7 @@ export function ArtifactList({ getToken }: { getToken: () => Promise<string | nu
 
   return (
     <div style={styles.shell}>
-      <header style={styles.header}>
-        <Link href="/capture" style={styles.logo}>
-          Studigital
-        </Link>
-        <nav style={styles.nav}>
-          <Link href="/dashboard" style={styles.navLink}>Home</Link>
-          <Link href="/capture" style={styles.navLink}>Capture</Link>
-          <Link href="/review" style={styles.navLink}>Review</Link>
-          <span style={{ ...styles.navLink, color: "#1a1a1a", fontWeight: 700 }}>History</span>
-          <Link href="/profile" style={styles.navLink}>Profile</Link>
-        </nav>
-      </header>
+      <AppNav active="history" />
 
       <main style={styles.main}>
         <h1 style={styles.heading}>History</h1>
@@ -232,32 +222,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     background: "#fafafa",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "1rem 1.5rem",
-    borderBottom: "1px solid #eee",
-    background: "#fff",
-  },
-  logo: {
-    fontWeight: 700,
-    fontSize: "1.125rem",
-    letterSpacing: "-0.01em",
-    textDecoration: "none",
-    color: "inherit",
-  },
-  nav: {
-    display: "flex",
-    gap: "1.5rem",
-    alignItems: "center",
-  },
-  navLink: {
-    fontSize: "0.9375rem",
-    color: "#666",
-    textDecoration: "none",
-    fontWeight: 500,
   },
   main: {
     flex: 1,

@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { tagColors } from "@/lib/tagColor";
+import { AppNav } from "@/components/AppNav";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -48,16 +48,7 @@ export function ProfilePage({ getToken }: { getToken: () => Promise<string | nul
 
   return (
     <div style={s.shell}>
-      <header style={s.header}>
-        <Link href="/capture" style={s.logo}>Studigital</Link>
-        <nav style={s.nav}>
-          <Link href="/dashboard" style={s.navLink}>Home</Link>
-          <Link href="/capture" style={s.navLink}>Capture</Link>
-          <Link href="/review" style={s.navLink}>Review</Link>
-          <Link href="/artifacts" style={s.navLink}>History</Link>
-          <span style={{ ...s.navLink, color: "#1a1a1a", fontWeight: 700 }}>Profile</span>
-        </nav>
-      </header>
+      <AppNav active="profile" />
 
       <main style={s.main}>
         <h1 style={s.heading}>Profile</h1>
@@ -139,13 +130,6 @@ export function ProfilePage({ getToken }: { getToken: () => Promise<string | nul
 
 const s: Record<string, React.CSSProperties> = {
   shell: { minHeight: "100vh", display: "flex", flexDirection: "column", background: "#fafafa" },
-  header: {
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-    padding: "1rem 1.5rem", borderBottom: "1px solid #eee", background: "#fff",
-  },
-  logo: { fontWeight: 700, fontSize: "1.125rem", letterSpacing: "-0.01em", textDecoration: "none", color: "inherit" },
-  nav: { display: "flex", gap: "1.5rem", alignItems: "center" },
-  navLink: { fontSize: "0.9375rem", color: "#666", textDecoration: "none", fontWeight: 500 },
   main: { flex: 1, maxWidth: 600, width: "100%", margin: "0 auto", padding: "2rem 1rem" },
   heading: { fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em", marginBottom: "1.5rem" },
   statsRow: { display: "flex", gap: "1rem", marginBottom: "2rem" },
