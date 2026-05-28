@@ -1,10 +1,12 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
 import type { TransformResult, SuggestTagsResult, QuizQuestion, FlashcardPair } from "@/lib/transform";
 import { MarkdownContent } from "@/lib/MarkdownContent";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 type Skill = "generate_flashcard" | "generate_note" | "generate_quiz" | "suggest_tags";
 
@@ -24,6 +26,15 @@ const SKILLS: { value: Skill; label: string }[] = [
 ];
 
 export default function SkillTestPage() {
+  return DEV_MODE ? <SkillTestShell getToken={async () => null} /> : <AuthSkillTest />;
+}
+
+function AuthSkillTest() {
+  const { getToken } = useAuth();
+  return <SkillTestShell getToken={getToken} />;
+}
+
+function SkillTestShell({ getToken }: { getToken: () => Promise<string | null> }) {
   const [skill, setSkill] = useState<Skill>("generate_flashcard");
   const [text, setText] = useState("");
   const [tier, setTier] = useState<"free" | "paid">("free");
@@ -34,17 +45,19 @@ export default function SkillTestPage() {
     if (!text.trim()) return;
     setPhase({ status: "running" });
     try {
+      const token = await getToken();
+      const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
       let res: Response;
       if (skill === "suggest_tags") {
         res = await fetch(`${API_URL}/api/v1/captures/suggest-tags`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ text: text.trim() }),
         });
       } else {
         res = await fetch(`${API_URL}/api/v1/captures/transform`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ text: text.trim(), skill_name: skill, tier }),
         });
       }
