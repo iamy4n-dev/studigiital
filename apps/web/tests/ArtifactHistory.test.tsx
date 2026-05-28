@@ -29,10 +29,13 @@ const makeArtifact = (id: string, status: string, type = "generate_flashcard") =
   status,
 });
 
-function mockFetch(artifacts: object[], suggestions: string[] = []) {
+function mockFetch(artifacts: object[], suggestions: string[] = [], existingTags: object[] = []) {
   global.fetch = jest.fn().mockImplementation((url: string) => {
-    if (typeof url === "string" && url.includes("suggest-tags")) {
+    if (url.includes("suggest-tags")) {
       return Promise.resolve({ ok: true, json: async () => ({ suggestions }) } as Response);
+    }
+    if (url.includes("/api/v1/tags")) {
+      return Promise.resolve({ ok: true, json: async () => existingTags } as Response);
     }
     return Promise.resolve({ ok: true, json: async () => artifacts } as Response);
   });
@@ -70,7 +73,7 @@ test("draft card shows Tag me badge", async () => {
 // Slice 5 — clicking Tag me expands inline tag confirmation
 // ---------------------------------------------------------------------------
 
-test("clicking Tag me reveals tag input and confirm button", async () => {
+test("clicking Tag me reveals TagConfirm UI with Add tag input", async () => {
   mockFetch([makeArtifact("draft-1", "draft")]);
 
   render(<ArtifactList getToken={noToken} />);
@@ -79,8 +82,7 @@ test("clicking Tag me reveals tag input and confirm button", async () => {
   fireEvent.click(screen.getByText("Tag me"));
 
   await waitFor(() => {
-    expect(screen.getByPlaceholderText(/add tags/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /save tags/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Add tag…")).toBeInTheDocument();
   });
 });
 
@@ -97,10 +99,11 @@ test("clicking Tag me on already-tagged draft does not fetch suggestions", async
   await waitFor(() => screen.getByText("Tag me"));
   fireEvent.click(screen.getByText("Tag me"));
 
-  const input = screen.getByPlaceholderText(/add tags/i);
-  // Give async fetch a chance to run (it shouldn't)
-  await new Promise((r) => setTimeout(r, 50));
-  expect(input).toHaveValue("");
+  // Wait for TagConfirm's fetchExisting to settle, then assert no suggest-tags call was made
+  await waitFor(() => {
+    const input = screen.getByPlaceholderText("Add tag…");
+    expect(input).toHaveValue("");
+  });
   const calls = (global.fetch as jest.Mock).mock.calls as [string][];
   const suggestCalls = calls.filter(([url]) => url.includes("suggest-tags"));
   expect(suggestCalls).toHaveLength(0);
@@ -110,7 +113,7 @@ test("clicking Tag me on already-tagged draft does not fetch suggestions", async
 // Slice 6 — clicking Tag me on tagless draft pre-populates suggestions
 // ---------------------------------------------------------------------------
 
-test("clicking Tag me on tagless draft pre-populates input with suggestions", async () => {
+test("clicking Tag me on tagless draft shows suggestions as removable chips", async () => {
   mockFetch([makeArtifact("draft-1", "draft")], ["biology", "photosynthesis"]);
 
   render(<ArtifactList getToken={noToken} />);
@@ -119,6 +122,7 @@ test("clicking Tag me on tagless draft pre-populates input with suggestions", as
   fireEvent.click(screen.getByText("Tag me"));
 
   await waitFor(() => {
-    expect(screen.getByPlaceholderText(/add tags/i)).toHaveValue("biology, photosynthesis");
+    expect(screen.getByRole("button", { name: "Remove biology" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove photosynthesis" })).toBeInTheDocument();
   });
 });

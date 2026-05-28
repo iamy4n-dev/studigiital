@@ -7,6 +7,7 @@ import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/sk
 import { buildCaptureUrl } from "@/lib/captureUrl";
 import { tagColors } from "@/lib/tagColor";
 import { partitionArtifacts, type ArtifactOut } from "@/lib/artifactPartition";
+import { TagConfirm } from "@/lib/TagConfirm";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
@@ -121,27 +122,7 @@ function ArtifactCard({
   onTagged: (id: string, tags: string[]) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [tagInput, setTagInput] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  async function expandWithSuggestions() {
-    setExpanded(true);
-    if (artifact.tags.length === 0 && artifact.source_text) {
-      const token = await getToken();
-      const res = await fetch(`${API_URL}/api/v1/captures/suggest-tags`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ text: artifact.source_text, existing_tags: [] }),
-      });
-      if (res.ok) {
-        const data = await res.json() as { suggestions: string[] };
-        setTagInput(data.suggestions.join(", "));
-      }
-    }
-  }
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const preview = getPreview(artifact);
   const badge = BADGE_LABELS[artifact.artifact_type] ?? artifact.artifact_type;
@@ -156,30 +137,26 @@ function ArtifactCard({
     ? otherSkills(artifact.artifact_type as SkillName)
     : null;
 
-  async function saveTags() {
-    const tags = tagInput
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-    if (tags.length === 0) return;
-    setSaving(true);
-    try {
+  async function expandWithSuggestions() {
+    if (expanded) { setExpanded(false); return; }
+    let seeded: string[] = [];
+    if (artifact.tags.length === 0 && artifact.source_text) {
       const token = await getToken();
-      const res = await fetch(`${API_URL}/api/v1/artifacts/${artifact.id}/tags`, {
-        method: "PUT",
+      const res = await fetch(`${API_URL}/api/v1/captures/suggest-tags`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(tags),
+        body: JSON.stringify({ text: artifact.source_text, existing_tags: [] }),
       });
       if (res.ok) {
-        onTagged(artifact.id, tags);
-        setExpanded(false);
+        const data = await res.json() as { suggestions: string[] };
+        seeded = data.suggestions;
       }
-    } finally {
-      setSaving(false);
     }
+    setSuggestions(seeded);
+    setExpanded(true);
   }
 
   return (
@@ -190,7 +167,7 @@ function ArtifactCard({
             {badge}
           </span>
           {artifact.status === "draft" && (
-            <button style={styles.tagMeBadge} onClick={() => expanded ? setExpanded(false) : expandWithSuggestions()}>
+            <button style={styles.tagMeBadge} onClick={expandWithSuggestions}>
               Tag me
             </button>
           )}
@@ -211,17 +188,12 @@ function ArtifactCard({
         </div>
       )}
       {expanded && (
-        <div style={styles.tagForm}>
-          <input
-            style={styles.tagInput}
-            placeholder="Add tags (comma-separated)"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-          />
-          <button style={styles.saveButton} onClick={saveTags} disabled={saving}>
-            Save tags
-          </button>
-        </div>
+        <TagConfirm
+          suggestions={suggestions}
+          artifactId={artifact.id}
+          getToken={getToken}
+          onSaved={(tags) => { onTagged(artifact.id, tags); setExpanded(false); }}
+        />
       )}
       {rerunSkills && artifact.source_text && (
         <div style={styles.rerunRow}>
@@ -335,30 +307,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#92400e",
     cursor: "pointer",
     border: "none",
-  },
-  tagForm: {
-    display: "flex",
-    gap: "0.5rem",
-    alignItems: "center",
-    paddingTop: "0.25rem",
-  },
-  tagInput: {
-    flex: 1,
-    fontSize: "0.875rem",
-    padding: "0.35rem 0.6rem",
-    border: "1.5px solid #d1d5db",
-    borderRadius: 6,
-    outline: "none",
-  },
-  saveButton: {
-    fontSize: "0.8125rem",
-    fontWeight: 600,
-    padding: "0.35rem 0.75rem",
-    borderRadius: 6,
-    border: "none",
-    background: "#1a1a1a",
-    color: "#fff",
-    cursor: "pointer",
   },
   sectionHeading: {
     fontSize: "0.875rem",
