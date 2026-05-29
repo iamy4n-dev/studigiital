@@ -52,6 +52,7 @@ class TransformRequest(BaseModel):
     tier: Literal["free", "paid"] = "free"
     skill_name: str | None = None  # if set, skips the infer step
     source_artifact_id: str | None = None  # if set, inherit committed tags (Derivation)
+    confirmed_tags: list[str] = Field(default_factory=list)
 
 
 class FlashcardTransformResponse(BaseModel):
@@ -146,7 +147,9 @@ async def transform_capture(
     else:
         raise ValueError(f"Unsupported skill: {skill_name!r}")
 
-    if payload.source_artifact_id:
+    if payload.confirmed_tags:
+        result.suggested_tags = payload.confirmed_tags
+    elif payload.source_artifact_id:
         stmt = (
             select(Artifact, Capture)
             .join(Capture, Artifact.capture_id == Capture.id)
@@ -179,6 +182,7 @@ async def transform_capture(
         capture_id=capture.id,
         artifact_type=skill_name,
         content=result.model_dump(),
+        tags=payload.confirmed_tags,
         status="draft",
     )
     session.add(artifact)

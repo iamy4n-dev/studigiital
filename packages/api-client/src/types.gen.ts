@@ -136,6 +136,7 @@ export type TransformRequest = {
     tier?: 'free' | 'paid';
     skill_name?: (string | null);
     source_artifact_id?: (string | null);
+    confirmed_tags?: Array<(string)>;
 };
 
 export type tier = 'free' | 'paid';
