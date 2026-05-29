@@ -5,7 +5,6 @@ import { useState } from "react";
 import type { TransformResult, SuggestTagsResult, QuizQuestion, FlashcardPair } from "@/lib/transform";
 import { MarkdownContent } from "@/lib/MarkdownContent";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 type Skill = "generate_flashcard" | "generate_note" | "generate_quiz" | "suggest_tags";
@@ -49,13 +48,13 @@ function SkillTestShell({ getToken }: { getToken: () => Promise<string | null> }
       const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
       let res: Response;
       if (skill === "suggest_tags") {
-        res = await fetch(`${API_URL}/api/v1/captures/suggest-tags`, {
+        res = await fetch("/api/v1/captures/suggest-tags", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ text: text.trim() }),
         });
       } else {
-        res = await fetch(`${API_URL}/api/v1/captures/transform`, {
+        res = await fetch("/api/v1/captures/transform", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ text: text.trim(), skill_name: skill, tier }),

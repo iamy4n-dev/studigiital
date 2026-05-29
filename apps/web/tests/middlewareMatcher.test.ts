@@ -16,5 +16,7 @@ test("api proxy paths are not matched by Clerk middleware", () => {
 test("page routes are still matched by Clerk middleware", () => {
   expect(matchesAny("/dashboard")).toBe(true);
   expect(matchesAny("/capture")).toBe(true);
+  expect(matchesAny("/review")).toBe(true);
+  expect(matchesAny("/profile")).toBe(true);
   expect(matchesAny("/")).toBe(true);
 });

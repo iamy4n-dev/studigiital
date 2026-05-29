@@ -18,7 +18,6 @@ type Phase =
   | { status: "result"; data: TransformResult }
   | { status: "error"; message: string };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 export default function CapturePage() {
@@ -72,7 +71,7 @@ function CaptureShell({
       const body: Record<string, string> = { text: submitText.trim(), tier: "free" };
       if (submitSkill !== "auto") body.skill_name = submitSkill;
       if (sourceArtifactId) body.source_artifact_id = sourceArtifactId;
-      const res = await fetch(`${API_URL}/api/v1/captures/transform`, {
+      const res = await fetch("/api/v1/captures/transform", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { tagColors } from "@/lib/tagColor";
 import { AppNav } from "@/components/AppNav";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 interface TagMastery {
   tag: string;
   item_count: number;
@@ -34,7 +32,7 @@ export function ProfilePage({ getToken }: { getToken: () => Promise<string | nul
     async function load() {
       try {
         const token = await getToken();
-        const res = await fetch(`${API_URL}/api/v1/profile/mastery`, {
+        const res = await fetch("/api/v1/profile/mastery", {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error(`${res.status}`);

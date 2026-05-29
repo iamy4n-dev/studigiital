@@ -6,7 +6,6 @@ import { AppNav } from "@/components/AppNav";
 import { DrillView } from "@/components/DrillView";
 import type { DrillConfig, QueueMode } from "@/components/DrillView";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 const LS_KEY = "studigital:last_drill_config";
 
@@ -74,7 +73,7 @@ function DrillSetup({
     async function load() {
       try {
         const token = await getToken();
-        const res = await fetch(`${API_URL}/api/v1/tags/`, {
+        const res = await fetch("/api/v1/tags/", {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error(`${res.status}`);
