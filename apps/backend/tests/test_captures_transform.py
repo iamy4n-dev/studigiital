@@ -326,7 +326,7 @@ async def test_transform_creates_artifact_with_draft_status(mock_backend: LLMBac
 
 
 @pytest.mark.asyncio
-async def test_transform_with_confirmed_tags_stores_them_on_artifact(mock_backend: LLMBackend) -> None:
+async def test_transform_confirmed_tags_stored_on_artifact(mock_backend: LLMBackend) -> None:
     from app.models.artifact import Artifact
 
     captured_artifacts: list[Artifact] = []
@@ -356,7 +356,7 @@ async def test_transform_with_confirmed_tags_stores_them_on_artifact(mock_backen
 
 
 @pytest.mark.asyncio
-async def test_transform_with_confirmed_tags_skips_suggest_tags_llm_call(mock_backend: LLMBackend) -> None:
+async def test_transform_confirmed_tags_skips_suggest_tags_call(mock_backend: LLMBackend) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         await client.post(
             "/api/v1/captures/transform",
