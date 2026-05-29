@@ -326,6 +326,51 @@ async def test_transform_creates_artifact_with_draft_status(mock_backend: LLMBac
 
 
 @pytest.mark.asyncio
+async def test_transform_with_confirmed_tags_stores_them_on_artifact(mock_backend: LLMBackend) -> None:
+    from app.models.artifact import Artifact
+
+    captured_artifacts: list[Artifact] = []
+    mock_session = _make_mock_session()
+    def _capture_add(obj: object) -> None:
+        if isinstance(obj, Artifact):
+            captured_artifacts.append(obj)
+
+    mock_session.add = MagicMock(side_effect=_capture_add)
+
+    async def _session_override() -> AsyncGenerator[AsyncSession, None]:
+        yield mock_session
+
+    app.dependency_overrides[get_session] = _session_override
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(
+            "/api/v1/captures/transform",
+            json={
+                "text": "Photosynthesis is the process plants use to make food from sunlight.",
+                "confirmed_tags": ["biology", "photosynthesis"],
+            },
+        )
+
+    assert len(captured_artifacts) == 1
+    assert captured_artifacts[0].tags == ["biology", "photosynthesis"]
+
+
+@pytest.mark.asyncio
+async def test_transform_with_confirmed_tags_skips_suggest_tags_llm_call(mock_backend: LLMBackend) -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(
+            "/api/v1/captures/transform",
+            json={
+                "text": "Photosynthesis is the process plants use to make food from sunlight.",
+                "confirmed_tags": ["biology", "photosynthesis"],
+            },
+        )
+
+    # infer + generate only — suggest_tags call should be skipped
+    assert mock_backend.call_structured.call_count == 2  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
 async def test_transform_returns_quiz_schema_when_inferred() -> None:
     quiz_backend = _make_backend(
         {"skill_name": "generate_quiz", "confidence": 0.85},

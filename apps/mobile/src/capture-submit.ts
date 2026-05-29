@@ -10,7 +10,8 @@ export async function submitCapture(
   text: string,
   mode: string,
   tier: "free" | "paid",
-  isOnline: boolean
+  isOnline: boolean,
+  confirmedTags: string[] = [],
 ): Promise<SubmitResult> {
   if (!isOnline) {
     await enqueue(text, mode);
@@ -22,7 +23,7 @@ export async function submitCapture(
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, tier }),
+        body: JSON.stringify({ text, tier, confirmed_tags: confirmedTags }),
       }
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

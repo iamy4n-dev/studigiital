@@ -528,6 +528,13 @@ export const TransformRequestSchema = {
                 }
             ],
             title: 'Source Artifact Id'
+        },
+        confirmed_tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Confirmed Tags'
         }
     },
     type: 'object',

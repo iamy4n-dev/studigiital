@@ -81,7 +81,7 @@ export default function CaptureSheet({ visible, onClose }: Props) {
     const networkState = await Network.getNetworkStateAsync().catch(() => ({ isConnected: true, isInternetReachable: true }));
     const isOnline = !!(networkState.isConnected && networkState.isInternetReachable !== false);
 
-    const result = await submitCapture(text.trim(), "quick_text", tier, isOnline);
+    const result = await submitCapture(text.trim(), "quick_text", tier, isOnline, confirmedTags);
 
     if (result.status === "success") {
       setPhase({ id: "result", result: result.result });

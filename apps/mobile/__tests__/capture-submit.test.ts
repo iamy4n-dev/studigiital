@@ -41,6 +41,16 @@ test("offline → queued status and item stored as pending", async () => {
   expect(await getByStatus("pending")).toHaveLength(1);
 });
 
+test("confirmed tags are included in the transform request body", async () => {
+  const result = { skill_name: "generate_flashcard", cards: [{ front: "Q", back: "A" }], source_summary: "s" };
+  mockFetch.mockResolvedValueOnce({ ok: true, json: async () => result });
+
+  await submitCapture("my note", "quick_text", "free", true, ["math", "algebra"]);
+
+  const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+  expect(body.confirmed_tags).toEqual(["math", "algebra"]);
+});
+
 test("online + 500 → error status, fetch not retried", async () => {
   mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
 
