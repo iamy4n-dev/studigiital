@@ -14,8 +14,6 @@ class Settings(BaseSettings):
     clerk_publishable_key: str = ""
     # Derived automatically from clerk_publishable_key when left blank.
     clerk_jwks_url: str = ""
-    dev_mode: bool = False
-
     # LLM backend — "anthropic" uses Anthropic SDK directly;
     # "openai_compat" works with Ollama, LM Studio, or any OpenAI-compatible server.
     llm_provider: str = "anthropic"

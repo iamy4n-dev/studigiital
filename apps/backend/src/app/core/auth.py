@@ -42,12 +42,6 @@ class UserClaims(BaseModel):
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> UserClaims:
-    # TODO(pre-release): Remove dev bypass — see issue #31 for full pre-release checklist
-    if settings.dev_mode:
-        return UserClaims(user_id="dev-user", tier="paid")
-    if not settings.clerk_secret_key:
-        return UserClaims(user_id="dev-user", tier="free")
-
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
