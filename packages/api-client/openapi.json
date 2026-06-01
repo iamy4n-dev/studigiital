@@ -222,13 +222,13 @@
         }
       }
     },
-    "/api/v1/artifacts/": {
+    "/api/v1/artifacts": {
       "get": {
         "tags": [
           "artifacts"
         ],
         "summary": "List Artifacts",
-        "operationId": "list_artifacts_api_v1_artifacts__get",
+        "operationId": "list_artifacts_api_v1_artifacts_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -239,7 +239,7 @@
                     "$ref": "#/components/schemas/ArtifactOut"
                   },
                   "type": "array",
-                  "title": "Response List Artifacts Api V1 Artifacts  Get"
+                  "title": "Response List Artifacts Api V1 Artifacts Get"
                 }
               }
             }
@@ -361,13 +361,13 @@
         }
       }
     },
-    "/api/v1/tags/": {
+    "/api/v1/tags": {
       "get": {
         "tags": [
           "tags"
         ],
         "summary": "List Tags",
-        "operationId": "list_tags_api_v1_tags__get",
+        "operationId": "list_tags_api_v1_tags_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -378,7 +378,7 @@
                     "$ref": "#/components/schemas/TagOut"
                   },
                   "type": "array",
-                  "title": "Response List Tags Api V1 Tags  Get"
+                  "title": "Response List Tags Api V1 Tags Get"
                 }
               }
             }
