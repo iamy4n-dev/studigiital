@@ -76,6 +76,16 @@ export type NoteTransformResponse = {
     artifact_id?: string;
 };
 
+export type OcrRequest = {
+    media_key: string;
+    content_type?: string;
+};
+
+export type OcrResponse = {
+    extracted_text: string;
+    suggested_tags: Array<(string)>;
+};
+
 export type QueueResponse = {
     items: Array<DrillItemOut>;
     new_count: number;
@@ -182,6 +192,12 @@ export type GetUploadUrlApiV1CapturesUploadUrlPostData = {
 };
 
 export type GetUploadUrlApiV1CapturesUploadUrlPostResponse = (UploadUrlResponse);
+
+export type OcrCaptureApiV1CapturesOcrPostData = {
+    requestBody: OcrRequest;
+};
+
+export type OcrCaptureApiV1CapturesOcrPostResponse = (OcrResponse);
 
 export type SuggestTagsApiV1CapturesSuggestTagsPostData = {
     requestBody: SuggestTagsRequest;

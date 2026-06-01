@@ -51,6 +51,52 @@
         ]
       }
     },
+    "/api/v1/captures/ocr": {
+      "post": {
+        "tags": [
+          "captures"
+        ],
+        "summary": "Ocr Capture",
+        "operationId": "ocr_capture_api_v1_captures_ocr_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OcrRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OcrResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/captures/suggest-tags": {
       "post": {
         "tags": [
@@ -1020,6 +1066,45 @@
           "key_points"
         ],
         "title": "NoteTransformResponse"
+      },
+      "OcrRequest": {
+        "properties": {
+          "media_key": {
+            "type": "string",
+            "title": "Media Key"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type",
+            "default": "image/jpeg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media_key"
+        ],
+        "title": "OcrRequest"
+      },
+      "OcrResponse": {
+        "properties": {
+          "extracted_text": {
+            "type": "string",
+            "title": "Extracted Text"
+          },
+          "suggested_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggested Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "extracted_text",
+          "suggested_tags"
+        ],
+        "title": "OcrResponse"
       },
       "QueueResponse": {
         "properties": {
