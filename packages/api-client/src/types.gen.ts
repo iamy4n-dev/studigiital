@@ -141,6 +141,16 @@ export type TransformRequest = {
 
 export type tier = 'free' | 'paid';
 
+export type UploadUrlRequest = {
+    filename: string;
+    content_type: string;
+};
+
+export type UploadUrlResponse = {
+    upload_url: string;
+    object_key: string;
+};
+
 export type UserClaims = {
     user_id: string;
     tier?: string;
@@ -166,6 +176,12 @@ export type ValidationError = {
         [key: string]: unknown;
     };
 };
+
+export type GetUploadUrlApiV1CapturesUploadUrlPostData = {
+    requestBody: UploadUrlRequest;
+};
+
+export type GetUploadUrlApiV1CapturesUploadUrlPostResponse = (UploadUrlResponse);
 
 export type SuggestTagsApiV1CapturesSuggestTagsPostData = {
     requestBody: SuggestTagsRequest;

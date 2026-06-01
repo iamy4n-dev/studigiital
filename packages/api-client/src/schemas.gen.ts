@@ -542,6 +542,38 @@ export const TransformRequestSchema = {
     title: 'TransformRequest'
 } as const;
 
+export const UploadUrlRequestSchema = {
+    properties: {
+        filename: {
+            type: 'string',
+            title: 'Filename'
+        },
+        content_type: {
+            type: 'string',
+            title: 'Content Type'
+        }
+    },
+    type: 'object',
+    required: ['filename', 'content_type'],
+    title: 'UploadUrlRequest'
+} as const;
+
+export const UploadUrlResponseSchema = {
+    properties: {
+        upload_url: {
+            type: 'string',
+            title: 'Upload Url'
+        },
+        object_key: {
+            type: 'string',
+            title: 'Object Key'
+        }
+    },
+    type: 'object',
+    required: ['upload_url', 'object_key'],
+    title: 'UploadUrlResponse'
+} as const;
+
 export const UserClaimsSchema = {
     properties: {
         user_id: {
