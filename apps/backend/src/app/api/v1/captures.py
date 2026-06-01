@@ -248,8 +248,31 @@ async def transform_capture(
 
 
 @router.post("/", response_model=CaptureOut, status_code=201)
-async def create_capture(payload: CaptureCreate) -> CaptureOut:
-    raise NotImplementedError
+async def create_capture(
+    payload: CaptureCreate,
+    user: CurrentUser,
+    session: SessionDep,
+) -> CaptureOut:
+    from datetime import UTC, datetime
+
+    capture = Capture(
+        id=str(uuid.uuid4()),
+        user_id=user.user_id,
+        mode=payload.mode,
+        raw_content=payload.raw_content,
+        media_key=payload.media_key,
+        status="pending",
+        created_at=datetime.now(UTC),
+    )
+    session.add(capture)
+    await session.commit()
+    return CaptureOut(
+        id=capture.id,
+        user_id=capture.user_id,
+        mode=capture.mode,
+        status=capture.status,
+        created_at=capture.created_at.isoformat(),
+    )
 
 
 @router.get("/{capture_id}", response_model=CaptureOut)
