@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Literal
 
+from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -12,8 +13,6 @@ from app.core.auth import UserClaims, get_current_user
 from app.core.config import settings
 from app.core.db import get_session
 from app.core.llm import LLMBackend, get_llm_backend
-from botocore.exceptions import ClientError  # type: ignore[import-untyped]
-
 from app.core.s3 import download_s3_object, generate_presigned_put_url
 from app.models.artifact import Artifact
 from app.models.artifact_item import ArtifactItem

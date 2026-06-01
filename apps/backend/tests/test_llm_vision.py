@@ -18,7 +18,9 @@ async def test_anthropic_call_vision_returns_extracted_text() -> None:
     mock_response.content = [mock_text_block]
     mock_client.messages.create = AsyncMock(return_value=mock_response)
 
-    result = await backend.call_vision(b"\xff\xd8\xff", "image/jpeg", "Extract text", "claude-haiku")
+    result = await backend.call_vision(
+        b"\xff\xd8\xff", "image/jpeg", "Extract text", "claude-haiku"
+    )
 
     assert result == "Hello from the image"
     mock_client.messages.create.assert_called_once()
