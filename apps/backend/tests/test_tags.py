@@ -40,7 +40,7 @@ async def test_list_tags_returns_distinct_names() -> None:
     _override(_make_session([["biology", "photosynthesis"], ["biology", "chemistry"]]))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get("/api/v1/tags/")
+        response = await client.get("/api/v1/tags")
 
     assert response.status_code == 200
     body = response.json()
@@ -52,7 +52,7 @@ async def test_list_tags_includes_bg_and_text_colors() -> None:
     _override(_make_session([["biology"]]))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get("/api/v1/tags/")
+        response = await client.get("/api/v1/tags")
 
     tag = response.json()[0]
     assert tag["bg"].startswith("#")
@@ -63,6 +63,6 @@ async def test_list_tags_returns_empty_when_no_tags() -> None:
     _override(_make_session([[], []]))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get("/api/v1/tags/")
+        response = await client.get("/api/v1/tags")
 
     assert response.json() == []
