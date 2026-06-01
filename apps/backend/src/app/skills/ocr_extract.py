@@ -5,7 +5,8 @@ from app.core.llm import LLMBackend
 _PROMPT = (
     "Extract all text visible in this image. "
     "Return only the raw text content, preserving line breaks and structure where present. "
-    "Do not add commentary or formatting."
+    "Do not add commentary or formatting. "
+    "If no text is visible, return an empty string."
 )
 
 
