@@ -12,6 +12,8 @@ from app.core.auth import UserClaims, get_current_user
 from app.core.config import settings
 from app.core.db import get_session
 from app.core.llm import LLMBackend, get_llm_backend
+from botocore.exceptions import ClientError  # type: ignore[import-untyped]
+
 from app.core.s3 import download_s3_object, generate_presigned_put_url
 from app.models.artifact import Artifact
 from app.models.artifact_item import ArtifactItem
@@ -132,7 +134,13 @@ async def ocr_capture(
     _user: CurrentUser,
     backend: LLMBackendDep,
 ) -> OcrResponse:
-    image_bytes = download_s3_object(payload.media_key)
+    try:
+        image_bytes = download_s3_object(payload.media_key)
+    except ClientError as exc:
+        code = exc.response["Error"]["Code"]
+        if code in ("NoSuchKey", "404"):
+            raise HTTPException(status_code=404, detail="Media object not found")
+        raise HTTPException(status_code=502, detail="Failed to retrieve media from storage")
     ocr_skill = OcrExtractSkill(backend, settings.llm_model_ocr)
     extracted_text = await ocr_skill.run(image_bytes, payload.content_type)
     tags_skill = SuggestTagsSkill(backend, settings.llm_model_infer)
