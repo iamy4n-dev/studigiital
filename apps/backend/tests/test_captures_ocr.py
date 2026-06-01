@@ -80,6 +80,16 @@ async def test_ocr_endpoint_returns_404_when_s3_key_missing() -> None:
 
 
 @pytest.mark.asyncio
+async def test_ocr_endpoint_rejects_other_users_media() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/captures/ocr",
+            json={"media_key": "captures/other-user/abc/photo.jpg"},
+        )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_ocr_endpoint_returns_502_on_s3_error() -> None:
     error_response = {"Error": {"Code": "InternalError", "Message": "S3 is unavailable."}}
     s3_error = ClientError(error_response, "GetObject")

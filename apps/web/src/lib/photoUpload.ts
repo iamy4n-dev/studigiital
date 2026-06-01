@@ -6,9 +6,7 @@ export async function uploadAndOcr(
   file: File,
   token: string | null,
 ): Promise<OcrResponse> {
-  if (!token) throw new Error("uploadAndOcr: auth token is required");
-
-  const authHeader = { Authorization: `Bearer ${token}` };
+  const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
   const contentType = file.type || "image/jpeg";
 

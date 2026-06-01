@@ -131,9 +131,11 @@ async def get_upload_url(
 @router.post("/ocr", response_model=OcrResponse)
 async def ocr_capture(
     payload: OcrRequest,
-    _user: CurrentUser,
+    user: CurrentUser,
     backend: LLMBackendDep,
 ) -> OcrResponse:
+    if not payload.media_key.startswith(f"captures/{user.user_id}/"):
+        raise HTTPException(status_code=403, detail="Media key does not belong to current user")
     try:
         image_bytes = download_s3_object(payload.media_key)
     except ClientError as exc:
