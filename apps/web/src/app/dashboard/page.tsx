@@ -17,7 +17,6 @@ interface ArtifactOut {
   source_text: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 export default function DashboardPage() {
@@ -37,7 +36,7 @@ function Dashboard({ getToken }: { getToken: () => Promise<string | null> }) {
     async function load() {
       try {
         const token = await getToken();
-        const res = await fetch(`${API_URL}/api/v1/artifacts/`, {
+        const res = await fetch(`/api/v1/artifacts/`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error(`${res.status}`);

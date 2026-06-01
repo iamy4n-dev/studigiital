@@ -1,7 +1,5 @@
 import type { OcrResponse } from "@studigiital/api-client";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 export async function uploadAndOcr(
   file: File,
   token: string | null,
@@ -10,7 +8,7 @@ export async function uploadAndOcr(
 
   const contentType = file.type || "image/jpeg";
 
-  const presignRes = await fetch(`${API_URL}/api/v1/captures/upload-url`, {
+  const presignRes = await fetch(`/api/v1/captures/upload-url`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader },
     body: JSON.stringify({ filename: file.name, content_type: contentType }),
@@ -33,7 +31,7 @@ export async function uploadAndOcr(
   });
   if (!s3Res.ok) throw new Error(`S3 upload failed: HTTP ${s3Res.status}`);
 
-  const ocrRes = await fetch(`${API_URL}/api/v1/captures/ocr`, {
+  const ocrRes = await fetch(`/api/v1/captures/ocr`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeader },
     body: JSON.stringify({ media_key: object_key, content_type: contentType }),
