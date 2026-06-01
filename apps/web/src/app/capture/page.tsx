@@ -17,7 +17,6 @@ type CaptureMode = "text" | "photo";
 
 type Phase =
   | { status: "idle" }
-  | { status: "uploading" }
   | { status: "scanning" }
   | { status: "tag_confirm"; extractedText: string; suggestedTags: string[] }
   | { status: "submitting" }
@@ -104,10 +103,9 @@ function CaptureShell({
   }
 
   async function handlePhotoFile(file: File) {
-    setPhase({ status: "uploading" });
+    setPhase({ status: "scanning" });
     try {
       const token = await getToken();
-      setPhase({ status: "scanning" });
       const { extracted_text, suggested_tags } = await uploadAndOcr(file, token);
       setPhase({ status: "tag_confirm", extractedText: extracted_text, suggestedTags: suggested_tags });
     } catch {
@@ -171,18 +169,19 @@ function CaptureShell({
               <PhotoIdleView onFile={handlePhotoFile} />
             )}
           </div>
-        ) : phase.status === "uploading" ? (
-          <StatusView message="Uploading photo…" />
         ) : phase.status === "scanning" ? (
-          <StatusView message="Scanning text from photo…" />
-        ) : phase.status === "tag_confirm" ? (
-          <PreTransformTagConfirm
-            extractedText={phase.extractedText}
-            suggestedTags={phase.suggestedTags}
-            onConfirm={(tags) => runTransform(phase.extractedText, "auto", tags)}
-            onCancel={reset}
-          />
-        ) : phase.status === "submitting" ? (
+          <StatusView message="Uploading and scanning photo…" />
+        ) : phase.status === "tag_confirm" ? (() => {
+          const { extractedText, suggestedTags } = phase;
+          return (
+            <PreTransformTagConfirm
+              extractedText={extractedText}
+              suggestedTags={suggestedTags}
+              onConfirm={(tags) => runTransform(extractedText, "auto", tags)}
+              onCancel={reset}
+            />
+          );
+        })() : phase.status === "submitting" ? (
           <TransformingView />
         ) : phase.status === "result" ? (
           <ResultView data={phase.data} onReset={reset} onAlsoMake={handleAlsoMake} getToken={getToken} />
@@ -236,7 +235,6 @@ function PhotoIdleView({ onFile }: { onFile: (f: File) => void }) {
         <input
           type="file"
           accept="image/*"
-          capture="environment"
           style={{ display: "none" }}
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -245,7 +243,7 @@ function PhotoIdleView({ onFile }: { onFile: (f: File) => void }) {
         />
       </label>
       <p style={{ fontSize: "0.8125rem", color: "#aaa" }}>
-        On mobile, this opens your camera directly.
+        On mobile, choose camera or photo library.
       </p>
     </div>
   );
@@ -354,8 +352,7 @@ function PreTransformTagConfirm({
       <div style={{ display: "flex", gap: "0.75rem" }}>
         <button
           type="button"
-          style={{ ...styles.button, opacity: tags.length === 0 ? 0.6 : 1 }}
-          disabled={tags.length === 0}
+          style={styles.button}
           onClick={() => onConfirm(tags)}
         >
           Confirm →
