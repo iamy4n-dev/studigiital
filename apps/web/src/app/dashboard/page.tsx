@@ -36,7 +36,7 @@ function Dashboard({ getToken }: { getToken: () => Promise<string | null> }) {
     async function load() {
       try {
         const token = await getToken();
-        const res = await fetch("/api/v1/artifacts/", {
+        const res = await fetch("/api/v1/artifacts", {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error(`${res.status}`);

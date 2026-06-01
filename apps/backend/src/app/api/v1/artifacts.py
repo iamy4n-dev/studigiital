@@ -42,7 +42,7 @@ def _artifact_out(a: Artifact, c: Capture) -> ArtifactOut:
     )
 
 
-@router.get("/", response_model=list[ArtifactOut])
+@router.get("", response_model=list[ArtifactOut])
 async def list_artifacts(user: CurrentUser, session: SessionDep) -> list[ArtifactOut]:
     stmt = (
         select(Artifact, Capture)

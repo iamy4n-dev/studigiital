@@ -25,7 +25,7 @@ export function TagConfirm({
     async function fetchExisting() {
       try {
         const token = await getToken();
-        const res = await fetch("/api/v1/tags/", {
+        const res = await fetch("/api/v1/tags", {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (res.ok) setExistingTags(await res.json());
