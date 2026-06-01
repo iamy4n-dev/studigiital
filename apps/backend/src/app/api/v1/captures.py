@@ -12,7 +12,7 @@ from app.core.auth import UserClaims, get_current_user
 from app.core.config import settings
 from app.core.db import get_session
 from app.core.llm import LLMBackend, get_llm_backend
-from app.core.s3 import generate_presigned_put_url
+from app.core.s3 import download_s3_object, generate_presigned_put_url
 from app.models.artifact import Artifact
 from app.models.artifact_item import ArtifactItem
 from app.models.capture import Capture
@@ -24,6 +24,7 @@ from app.skills.generate_flashcard import (
 from app.skills.generate_note import GenerateNoteInput, GenerateNoteSkill
 from app.skills.generate_quiz import GenerateQuizInput, GenerateQuizSkill, QuizQuestion
 from app.skills.infer_format import InferFormatInput
+from app.skills.ocr_extract import OcrExtractSkill
 from app.skills.registry import SkillRegistry
 from app.skills.suggest_tags import SuggestTagsInput, SuggestTagsSkill
 
@@ -105,6 +106,16 @@ class UploadUrlResponse(BaseModel):
     object_key: str
 
 
+class OcrRequest(BaseModel):
+    media_key: str
+    content_type: str = "image/jpeg"
+
+
+class OcrResponse(BaseModel):
+    extracted_text: str
+    suggested_tags: list[str]
+
+
 @router.post("/upload-url", response_model=UploadUrlResponse)
 async def get_upload_url(
     payload: UploadUrlRequest,
@@ -113,6 +124,20 @@ async def get_upload_url(
     object_key = f"captures/{user.user_id}/{uuid.uuid4()}/{payload.filename}"
     upload_url = generate_presigned_put_url(object_key, payload.content_type)
     return UploadUrlResponse(upload_url=upload_url, object_key=object_key)
+
+
+@router.post("/ocr", response_model=OcrResponse)
+async def ocr_capture(
+    payload: OcrRequest,
+    _user: CurrentUser,
+    backend: LLMBackendDep,
+) -> OcrResponse:
+    image_bytes = download_s3_object(payload.media_key)
+    ocr_skill = OcrExtractSkill(backend, settings.llm_model_ocr)
+    extracted_text = await ocr_skill.run(image_bytes, payload.content_type)
+    tags_skill = SuggestTagsSkill(backend, settings.llm_model_infer)
+    tags_out = await tags_skill.run(SuggestTagsInput(text=extracted_text))
+    return OcrResponse(extracted_text=extracted_text, suggested_tags=tags_out.suggestions)
 
 
 @router.post("/suggest-tags", response_model=SuggestTagsResponse)
