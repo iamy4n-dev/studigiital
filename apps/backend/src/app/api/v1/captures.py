@@ -12,6 +12,7 @@ from app.core.auth import UserClaims, get_current_user
 from app.core.config import settings
 from app.core.db import get_session
 from app.core.llm import LLMBackend, get_llm_backend
+from app.core.s3 import generate_presigned_put_url
 from app.models.artifact import Artifact
 from app.models.artifact_item import ArtifactItem
 from app.models.capture import Capture
@@ -92,6 +93,26 @@ class SuggestTagsRequest(BaseModel):
 
 class SuggestTagsResponse(BaseModel):
     suggestions: list[str]
+
+
+class UploadUrlRequest(BaseModel):
+    filename: str
+    content_type: str
+
+
+class UploadUrlResponse(BaseModel):
+    upload_url: str
+    object_key: str
+
+
+@router.post("/upload-url", response_model=UploadUrlResponse)
+async def get_upload_url(
+    payload: UploadUrlRequest,
+    user: CurrentUser,
+) -> UploadUrlResponse:
+    object_key = f"captures/{user.user_id}/{uuid.uuid4()}/{payload.filename}"
+    upload_url = generate_presigned_put_url(object_key, payload.content_type)
+    return UploadUrlResponse(upload_url=upload_url, object_key=object_key)
 
 
 @router.post("/suggest-tags", response_model=SuggestTagsResponse)
@@ -227,8 +248,31 @@ async def transform_capture(
 
 
 @router.post("/", response_model=CaptureOut, status_code=201)
-async def create_capture(payload: CaptureCreate) -> CaptureOut:
-    raise NotImplementedError
+async def create_capture(
+    payload: CaptureCreate,
+    user: CurrentUser,
+    session: SessionDep,
+) -> CaptureOut:
+    from datetime import UTC, datetime
+
+    capture = Capture(
+        id=str(uuid.uuid4()),
+        user_id=user.user_id,
+        mode=payload.mode,
+        raw_content=payload.raw_content,
+        media_key=payload.media_key,
+        status="pending",
+        created_at=datetime.now(UTC),
+    )
+    session.add(capture)
+    await session.commit()
+    return CaptureOut(
+        id=capture.id,
+        user_id=capture.user_id,
+        mode=capture.mode,
+        status=capture.status,
+        created_at=capture.created_at.isoformat(),
+    )
 
 
 @router.get("/{capture_id}", response_model=CaptureOut)

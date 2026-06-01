@@ -5,6 +5,52 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/captures/upload-url": {
+      "post": {
+        "tags": [
+          "captures"
+        ],
+        "summary": "Get Upload Url",
+        "operationId": "get_upload_url_api_v1_captures_upload_url_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadUrlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/captures/suggest-tags": {
       "post": {
         "tags": [
@@ -177,7 +223,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/captures/{capture_id}": {
@@ -1247,6 +1298,42 @@
           "text"
         ],
         "title": "TransformRequest"
+      },
+      "UploadUrlRequest": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "content_type"
+        ],
+        "title": "UploadUrlRequest"
+      },
+      "UploadUrlResponse": {
+        "properties": {
+          "upload_url": {
+            "type": "string",
+            "title": "Upload Url"
+          },
+          "object_key": {
+            "type": "string",
+            "title": "Object Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "upload_url",
+          "object_key"
+        ],
+        "title": "UploadUrlResponse"
       },
       "UserClaims": {
         "properties": {

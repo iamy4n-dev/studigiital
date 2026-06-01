@@ -16,6 +16,7 @@ class Capture(Base):
     user_id: Mapped[str] = mapped_column(String, index=True)
     mode: Mapped[str] = mapped_column(String)
     raw_content: Mapped[str | None] = mapped_column(Text)
+    media_key: Mapped[str | None] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
