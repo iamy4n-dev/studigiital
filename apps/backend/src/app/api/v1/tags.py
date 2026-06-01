@@ -41,7 +41,7 @@ class TagOut(BaseModel):
     text: str
 
 
-@router.get("/", response_model=list[TagOut])
+@router.get("", response_model=list[TagOut])
 async def list_tags(user: CurrentUser, session: SessionDep) -> list[TagOut]:
     stmt = (
         select(Artifact.tags)

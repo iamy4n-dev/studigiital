@@ -102,7 +102,7 @@ export const getCaptureApiV1CapturesCaptureIdGet = (data: GetCaptureApiV1Capture
 export const listArtifactsApiV1ArtifactsGet = (): CancelablePromise<ListArtifactsApiV1ArtifactsGetResponse> => {
     return __request(OpenAPI, {
         method: 'GET',
-        url: '/api/v1/artifacts/'
+        url: '/api/v1/artifacts'
     });
 };
 
@@ -157,7 +157,7 @@ export const setArtifactTagsApiV1ArtifactsArtifactIdTagsPut = (data: SetArtifact
 export const listTagsApiV1TagsGet = (): CancelablePromise<ListTagsApiV1TagsGetResponse> => {
     return __request(OpenAPI, {
         method: 'GET',
-        url: '/api/v1/tags/'
+        url: '/api/v1/tags'
     });
 };
 

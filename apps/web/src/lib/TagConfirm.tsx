@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { tagColors } from "@/lib/tagColor";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 type ApiTagOut = { name: string; bg: string; text: string };
 
 export function TagConfirm({
@@ -27,7 +25,7 @@ export function TagConfirm({
     async function fetchExisting() {
       try {
         const token = await getToken();
-        const res = await fetch(`${API_URL}/api/v1/tags/`, {
+        const res = await fetch("/api/v1/tags", {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (res.ok) setExistingTags(await res.json());
@@ -56,7 +54,7 @@ export function TagConfirm({
   async function save() {
     try {
       const token = await getToken();
-      await fetch(`${API_URL}/api/v1/artifacts/${artifactId}/tags`, {
+      await fetch(`/api/v1/artifacts/${artifactId}/tags`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -127,7 +127,7 @@ async def test_artifact_response_includes_tags_after_set(mock_session: AsyncSess
     mock_session.execute = AsyncMock(return_value=result_with_tags)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get("/api/v1/artifacts/")
+        response = await client.get("/api/v1/artifacts")
 
     assert response.status_code == 200
     body = response.json()

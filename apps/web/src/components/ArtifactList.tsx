@@ -9,8 +9,6 @@ import { partitionArtifacts, type ArtifactOut } from "@/lib/artifactPartition";
 import { TagConfirm } from "@/lib/TagConfirm";
 import { AppNav } from "@/components/AppNav";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 export function ArtifactList({ getToken }: { getToken: () => Promise<string | null> }) {
   const [artifacts, setArtifacts] = useState<ArtifactOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +17,7 @@ export function ArtifactList({ getToken }: { getToken: () => Promise<string | nu
     async function load() {
       try {
         const token = await getToken();
-        const res = await fetch(`${API_URL}/api/v1/artifacts/`, {
+        const res = await fetch("/api/v1/artifacts", {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error(`Server error ${res.status}`);
@@ -122,7 +120,7 @@ function ArtifactCard({
     let seeded: string[] = [];
     if (artifact.tags.length === 0 && artifact.source_text) {
       const token = await getToken();
-      const res = await fetch(`${API_URL}/api/v1/captures/suggest-tags`, {
+      const res = await fetch("/api/v1/captures/suggest-tags", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
