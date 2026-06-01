@@ -10,6 +10,8 @@ import openai
 
 from app.core.config import settings
 
+_ANTHROPIC_IMAGE_TYPES = frozenset({"image/gif", "image/jpeg", "image/png", "image/webp"})
+
 
 class LLMBackend(ABC):
     @abstractmethod
@@ -63,6 +65,8 @@ class AnthropicBackend(LLMBackend):
         prompt: str,
         model: str,
     ) -> str:
+        if content_type not in _ANTHROPIC_IMAGE_TYPES:
+            raise ValueError(f"Unsupported image content_type: {content_type!r}")
         b64 = base64.standard_b64encode(image_bytes).decode()
         response = await self._client.messages.create(
             model=model,
@@ -137,6 +141,7 @@ class OpenAICompatBackend(LLMBackend):
         data_url = f"data:{content_type};base64,{b64}"
         response = await self._client.chat.completions.create(
             model=model,
+            max_tokens=2048,
             messages=[
                 {
                     "role": "user",

@@ -71,3 +71,22 @@ async def test_openai_compat_call_vision_returns_content() -> None:
     assert content[0]["type"] == "image_url"
     assert content[0]["image_url"]["url"].startswith("data:image/png;base64,")
     assert content[1]["type"] == "text"
+
+
+@pytest.mark.asyncio
+async def test_openai_compat_call_vision_returns_empty_string_when_content_none() -> None:
+    backend = OpenAICompatBackend.__new__(OpenAICompatBackend)
+    mock_client = MagicMock()
+    backend._client = mock_client
+
+    mock_message = MagicMock()
+    mock_message.content = None
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+    result = await backend.call_vision(b"\x89PNG", "image/png", "Extract text", "llava")
+
+    assert result == ""
