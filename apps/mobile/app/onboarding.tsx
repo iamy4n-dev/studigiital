@@ -1,3 +1,4 @@
+import { useAuth } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -21,6 +22,7 @@ const QUESTIONS: Array<{
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { getToken } = useAuth();
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState<LearningType | null>(null);
 
@@ -29,7 +31,8 @@ export default function OnboardingScreen() {
 
   async function handleSelect(value: LearningType) {
     setSelected(value);
-    await saveProfile(value);
+    const token = await getToken();
+    await saveProfile(value, token);
     router.replace("/");
   }
 
@@ -62,13 +65,16 @@ export default function OnboardingScreen() {
   );
 }
 
-async function saveProfile(learningType: LearningType): Promise<void> {
+async function saveProfile(learningType: LearningType, token: string | null): Promise<void> {
   // Profile is persisted via POST /api/v1/users/profile when backend is reachable.
   // Offline: the capture queue (#6) will retry; for now we fire-and-forget.
   try {
     await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/v1/users/profile`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ learning_type: learningType }),
     });
   } catch {

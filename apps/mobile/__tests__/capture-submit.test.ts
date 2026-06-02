@@ -24,7 +24,7 @@ test("online + 200 → success with transform result", async () => {
   const result = { skill_name: "generate_flashcard", cards: [{ front: "Q", back: "A" }], source_summary: "s" };
   mockFetch.mockResolvedValueOnce({ ok: true, json: async () => result });
 
-  const out = await submitCapture("my note", "quick_text", "free", true);
+  const out = await submitCapture("my note", "quick_text", "free", true, null);
 
   expect(out).toEqual({ status: "success", result });
   expect(mockFetch).toHaveBeenCalledWith(
@@ -33,8 +33,18 @@ test("online + 200 → success with transform result", async () => {
   );
 });
 
+test("sends Authorization header when token provided", async () => {
+  const result = { skill_name: "generate_flashcard", cards: [], source_summary: "" };
+  mockFetch.mockResolvedValueOnce({ ok: true, json: async () => result });
+
+  await submitCapture("my note", "quick_text", "free", true, "tok123");
+
+  const headers = mockFetch.mock.calls[0][1].headers;
+  expect(headers["Authorization"]).toBe("Bearer tok123");
+});
+
 test("offline → queued status and item stored as pending", async () => {
-  const out = await submitCapture("my note", "quick_text", "free", false);
+  const out = await submitCapture("my note", "quick_text", "free", false, null);
 
   expect(out).toEqual({ status: "queued" });
   expect(mockFetch).not.toHaveBeenCalled();
@@ -45,7 +55,7 @@ test("confirmed tags are included in the transform request body", async () => {
   const result = { skill_name: "generate_flashcard", cards: [{ front: "Q", back: "A" }], source_summary: "s" };
   mockFetch.mockResolvedValueOnce({ ok: true, json: async () => result });
 
-  await submitCapture("my note", "quick_text", "free", true, ["math", "algebra"]);
+  await submitCapture("my note", "quick_text", "free", true, null, ["math", "algebra"]);
 
   const body = JSON.parse(mockFetch.mock.calls[0][1].body);
   expect(body.confirmed_tags).toEqual(["math", "algebra"]);
@@ -54,7 +64,7 @@ test("confirmed tags are included in the transform request body", async () => {
 test("online + 500 → error status, fetch not retried", async () => {
   mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
 
-  const out = await submitCapture("my note", "quick_text", "free", true);
+  const out = await submitCapture("my note", "quick_text", "free", true, null);
 
   expect(out).toMatchObject({ status: "error" });
   expect(mockFetch).toHaveBeenCalledTimes(1);

@@ -4,7 +4,7 @@ jest.mock("expo-background-task");
 
 import * as SQLiteMock from "expo-sqlite";
 import { enqueue, initQueue } from "../src/capture-queue";
-import { drainQueue } from "../src/capture-sync";
+import { configureSyncAuth, drainQueue } from "../src/capture-sync";
 
 const resetQueue = () => (SQLiteMock as unknown as { __reset: () => void }).__reset();
 
@@ -16,6 +16,7 @@ beforeEach(async () => {
   await initQueue();
   mockFetch.mockReset();
   process.env.EXPO_PUBLIC_API_URL = "http://api.test";
+  configureSyncAuth(null as unknown as () => Promise<string | null>);
 });
 
 test("empty queue — fetch never called", async () => {
@@ -62,4 +63,18 @@ test("failed items are not retried", async () => {
   await drainQueue("free");
 
   expect(mockFetch).not.toHaveBeenCalled();
+});
+
+test("sends Authorization header when token provider configured", async () => {
+  configureSyncAuth(async () => "sync-tok-abc");
+  await enqueue("study note", "quick_text");
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ skill_name: "generate_flashcard", cards: [], source_summary: "" }),
+  });
+
+  await drainQueue("free");
+
+  const headers = mockFetch.mock.calls[0][1].headers;
+  expect(headers["Authorization"]).toBe("Bearer sync-tok-abc");
 });

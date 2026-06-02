@@ -54,3 +54,15 @@ test("returns empty array when API returns non-ok status", async () => {
 
   expect(result).toEqual([]);
 });
+
+test("sends Authorization header when token provided", async () => {
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ suggestions: ["math"] }),
+  });
+
+  await fetchTagSuggestions("Some content", [], "my-token");
+
+  const headers = mockFetch.mock.calls[0][1].headers;
+  expect(headers["Authorization"]).toBe("Bearer my-token");
+});

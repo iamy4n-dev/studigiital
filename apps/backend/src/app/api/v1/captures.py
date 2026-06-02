@@ -310,10 +310,37 @@ async def create_capture(
 
 
 @router.get("/{capture_id}", response_model=CaptureOut)
-async def get_capture(capture_id: str) -> CaptureOut:
-    raise NotImplementedError
+async def get_capture(
+    capture_id: str, user: CurrentUser, session: SessionDep
+) -> CaptureOut:
+    stmt = select(Capture).where(Capture.id == capture_id, Capture.user_id == user.user_id)
+    result = (await session.execute(stmt)).scalar_one_or_none()
+    if result is None:
+        raise HTTPException(status_code=404, detail="Capture not found")
+    return CaptureOut(
+        id=result.id,
+        user_id=result.user_id,
+        mode=result.mode,
+        status=result.status,
+        created_at=result.created_at.isoformat(),
+    )
 
 
 @router.get("/", response_model=list[CaptureOut])
-async def list_captures() -> list[CaptureOut]:
-    raise NotImplementedError
+async def list_captures(user: CurrentUser, session: SessionDep) -> list[CaptureOut]:
+    stmt = (
+        select(Capture)
+        .where(Capture.user_id == user.user_id)
+        .order_by(Capture.created_at.desc())
+    )
+    rows = (await session.execute(stmt)).scalars().all()
+    return [
+        CaptureOut(
+            id=c.id,
+            user_id=c.user_id,
+            mode=c.mode,
+            status=c.status,
+            created_at=c.created_at.isoformat(),
+        )
+        for c in rows
+    ]
