@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Literal, cast
 
 import anthropic
+import litellm
 import openai
 
 from app.core.config import settings
@@ -156,7 +157,63 @@ class OpenAICompatBackend(LLMBackend):
         return content or ""
 
 
+class OpenRouterBackend(LLMBackend):
+    """Routes calls through OpenRouter via LiteLLM."""
+
+    async def call_structured(
+        self,
+        prompt: str,
+        schema: dict[str, Any],
+        model: str,
+    ) -> dict[str, Any]:
+        response = await litellm.acompletion(
+            model=f"openrouter/{model}",
+            api_key=settings.openrouter_api_key,
+            messages=[{"role": "user", "content": prompt}],
+            tools=[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "output",
+                        "description": "Return the structured output.",
+                        "parameters": schema,
+                    },
+                }
+            ],
+            tool_choice="required",
+        )
+        args = response.choices[0].message.tool_calls[0].function.arguments  # type: ignore[index, union-attr]
+        return json.loads(args)  # type: ignore[no-any-return]
+
+    async def call_vision(
+        self,
+        image_bytes: bytes,
+        content_type: str,
+        prompt: str,
+        model: str,
+    ) -> str:
+        b64 = base64.standard_b64encode(image_bytes).decode()
+        data_url = f"data:{content_type};base64,{b64}"
+        response = await litellm.acompletion(
+            model=f"openrouter/{model}",
+            api_key=settings.openrouter_api_key,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": data_url}},
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ],
+        )
+        content = response.choices[0].message.content  # type: ignore[union-attr]
+        return content or ""  # type: ignore[return-value]
+
+
 def get_llm_backend() -> LLMBackend:
     if settings.llm_provider == "openai_compat":
         return OpenAICompatBackend()
+    if settings.llm_provider == "openrouter":
+        return OpenRouterBackend()
     return AnthropicBackend()
