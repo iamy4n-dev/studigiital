@@ -73,7 +73,7 @@ def _override(session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_captures_returns_200_with_captures(mock_session_with_captures: AsyncSession) -> None:
+async def test_list_captures_returns_200(mock_session_with_captures: AsyncSession) -> None:
     _override(mock_session_with_captures)
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:

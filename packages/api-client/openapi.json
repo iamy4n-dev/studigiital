@@ -1,3 +1,10 @@
+Using CPython 3.14.4 interpreter at: /usr/sbin/python3
+Removed virtual environment at: .venv
+Creating virtual environment at: .venv
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 71 packages in 436ms
 {
   "openapi": "3.1.0",
   "info": {
@@ -230,7 +237,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -284,6 +296,11 @@
         ],
         "summary": "Get Capture",
         "operationId": "get_capture_api_v1_captures__capture_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "capture_id",
@@ -319,13 +336,13 @@
         }
       }
     },
-    "/api/v1/artifacts/": {
+    "/api/v1/artifacts": {
       "get": {
         "tags": [
           "artifacts"
         ],
         "summary": "List Artifacts",
-        "operationId": "list_artifacts_api_v1_artifacts__get",
+        "operationId": "list_artifacts_api_v1_artifacts_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -336,7 +353,7 @@
                     "$ref": "#/components/schemas/ArtifactOut"
                   },
                   "type": "array",
-                  "title": "Response List Artifacts Api V1 Artifacts  Get"
+                  "title": "Response List Artifacts Api V1 Artifacts Get"
                 }
               }
             }
@@ -458,13 +475,13 @@
         }
       }
     },
-    "/api/v1/tags/": {
+    "/api/v1/tags": {
       "get": {
         "tags": [
           "tags"
         ],
         "summary": "List Tags",
-        "operationId": "list_tags_api_v1_tags__get",
+        "operationId": "list_tags_api_v1_tags_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -475,7 +492,7 @@
                     "$ref": "#/components/schemas/TagOut"
                   },
                   "type": "array",
-                  "title": "Response List Tags Api V1 Tags  Get"
+                  "title": "Response List Tags Api V1 Tags Get"
                 }
               }
             }
