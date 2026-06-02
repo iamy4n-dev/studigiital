@@ -5,6 +5,7 @@ import { AppNav } from "@/components/AppNav";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { mapErrorMessage } from "@/lib/errors";
+import { uploadAndOcr } from "@/lib/photoUpload";
 import { SKILL_LABELS, SKILL_NAMES, otherSkills, type SkillName } from "@/lib/skills";
 import type { FlashcardPair, QuizQuestion, TransformResult } from "@/lib/transform";
 import { MarkdownContent } from "@/lib/MarkdownContent";
@@ -12,8 +13,12 @@ import { TagConfirm } from "@/lib/TagConfirm";
 
 type SkillChoice = "auto" | SkillName;
 
+type CaptureMode = "text" | "photo";
+
 type Phase =
   | { status: "idle" }
+  | { status: "scanning" }
+  | { status: "tag_confirm"; extractedText: string; suggestedTags: string[] }
   | { status: "submitting" }
   | { status: "result"; data: TransformResult }
   | { status: "error"; message: string };
@@ -60,17 +65,23 @@ function CaptureShell({
   initialSkill: SkillChoice;
   sourceArtifactId?: string;
 }) {
+  const [mode, setMode] = useState<CaptureMode>("text");
   const [text, setText] = useState(initialText);
   const [skill, setSkill] = useState<SkillChoice>(initialSkill);
   const [phase, setPhase] = useState<Phase>({ status: "idle" });
 
-  async function runTransform(submitText: string, submitSkill: SkillChoice) {
+  async function runTransform(
+    submitText: string,
+    submitSkill: SkillChoice,
+    confirmedTags: string[] = [],
+  ) {
     setPhase({ status: "submitting" });
     try {
       const token = await getToken();
-      const body: Record<string, string> = { text: submitText.trim(), tier: "free" };
+      const body: Record<string, unknown> = { text: submitText.trim(), tier: "free" };
       if (submitSkill !== "auto") body.skill_name = submitSkill;
       if (sourceArtifactId) body.source_artifact_id = sourceArtifactId;
+      if (confirmedTags.length) body.confirmed_tags = confirmedTags;
       const res = await fetch("/api/v1/captures/transform", {
         method: "POST",
         headers: {
@@ -79,14 +90,23 @@ function CaptureShell({
         },
         body: JSON.stringify(body),
       });
-
       if (!res.ok) {
         setPhase({ status: "error", message: mapErrorMessage(res.status) });
         return;
       }
-
       const data: TransformResult = await res.json();
       setPhase({ status: "result", data });
+    } catch {
+      setPhase({ status: "error", message: mapErrorMessage(0) });
+    }
+  }
+
+  async function handlePhotoFile(file: File) {
+    setPhase({ status: "scanning" });
+    try {
+      const token = await getToken();
+      const { extracted_text, suggested_tags } = await uploadAndOcr(file, token);
+      setPhase({ status: "tag_confirm", extractedText: extracted_text, suggestedTags: suggested_tags });
     } catch {
       setPhase({ status: "error", message: mapErrorMessage(0) });
     }
@@ -100,7 +120,7 @@ function CaptureShell({
 
   function handleAlsoMake(chosenSkill: SkillName) {
     setSkill(chosenSkill);
-    runTransform(text, chosenSkill);
+    if (phase.status === "result") runTransform(text, chosenSkill);
   }
 
   function reset() {
@@ -117,32 +137,50 @@ function CaptureShell({
           <a href="/skill-test" style={styles.devLink}>Skill Tester ↗</a>
         </div>
       )}
-
       <main style={styles.main}>
         {phase.status === "idle" ? (
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <label style={styles.label} htmlFor="capture-text">
-              What did you just learn or get wrong?
-            </label>
-            <textarea
-              id="capture-text"
-              style={styles.textarea}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="e.g. I confused 'affect' and 'effect' again..."
-              rows={4}
-              autoFocus
+          <div style={styles.form}>
+            <ModeToggle mode={mode} onChange={(m) => { setMode(m); setPhase({ status: "idle" }); }} />
+            {mode === "text" ? (
+              <form onSubmit={handleSubmit} style={{ display: "contents" }}>
+                <label style={styles.label} htmlFor="capture-text">
+                  What did you just learn or get wrong?
+                </label>
+                <textarea
+                  id="capture-text"
+                  style={styles.textarea}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="e.g. I confused 'affect' and 'effect' again..."
+                  rows={4}
+                  autoFocus
+                />
+                <SkillToggle selected={skill} onChange={setSkill} />
+                <button
+                  type="submit"
+                  style={{ ...styles.button, opacity: !text.trim() ? 0.6 : 1 }}
+                  disabled={!text.trim()}
+                >
+                  Transform →
+                </button>
+              </form>
+            ) : (
+              <PhotoIdleView onFile={handlePhotoFile} />
+            )}
+          </div>
+        ) : phase.status === "scanning" ? (
+          <StatusView message="Uploading and scanning photo…" />
+        ) : phase.status === "tag_confirm" ? (() => {
+          const { extractedText, suggestedTags } = phase;
+          return (
+            <PreTransformTagConfirm
+              extractedText={extractedText}
+              suggestedTags={suggestedTags}
+              onConfirm={(tags) => runTransform(extractedText, "auto", tags)}
+              onCancel={reset}
             />
-            <SkillToggle selected={skill} onChange={setSkill} />
-            <button
-              type="submit"
-              style={{ ...styles.button, opacity: !text.trim() ? 0.6 : 1 }}
-              disabled={!text.trim()}
-            >
-              Transform →
-            </button>
-          </form>
-        ) : phase.status === "submitting" ? (
+          );
+        })() : phase.status === "submitting" ? (
           <TransformingView />
         ) : phase.status === "result" ? (
           <ResultView data={phase.data} onReset={reset} onAlsoMake={handleAlsoMake} getToken={getToken} />
@@ -150,6 +188,182 @@ function CaptureShell({
           <ErrorView message={phase.message} onReset={reset} />
         )}
       </main>
+    </div>
+  );
+}
+
+function ModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: CaptureMode;
+  onChange: (m: CaptureMode) => void;
+}) {
+  return (
+    <div style={styles.toggleGroup} role="group" aria-label="Capture mode">
+      {(["text", "photo"] as CaptureMode[]).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => onChange(m)}
+          style={{
+            ...styles.toggleButton,
+            ...(mode === m ? styles.toggleButtonActive : {}),
+          }}
+        >
+          {m === "text" ? "Text" : "Photo"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PhotoIdleView({ onFile }: { onFile: (f: File) => void }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <p style={styles.label}>Snap or upload a photo of your notes</p>
+      <label
+        style={{
+          ...styles.button,
+          display: "inline-block",
+          textAlign: "center",
+          cursor: "pointer",
+        }}
+      >
+        Choose photo →
+        <input
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onFile(file);
+          }}
+        />
+      </label>
+      <p style={{ fontSize: "0.8125rem", color: "#aaa" }}>
+        On mobile, choose camera or photo library.
+      </p>
+    </div>
+  );
+}
+
+function StatusView({ message }: { message: string }) {
+  return (
+    <div style={styles.progressContainer}>
+      <div className="spinner" />
+      <p style={styles.progressMessage}>{message}</p>
+    </div>
+  );
+}
+
+function PreTransformTagConfirm({
+  extractedText,
+  suggestedTags,
+  onConfirm,
+  onCancel,
+}: {
+  extractedText: string;
+  suggestedTags: string[];
+  onConfirm: (tags: string[]) => void;
+  onCancel: () => void;
+}) {
+  const [tags, setTags] = useState<string[]>(suggestedTags);
+  const [newTag, setNewTag] = useState("");
+
+  function addTag(name: string) {
+    const clean = name.trim().toLowerCase();
+    if (!clean || tags.includes(clean)) return;
+    setTags((prev) => [...prev, clean]);
+  }
+
+  function removeTag(name: string) {
+    setTags((prev) => prev.filter((t) => t !== name));
+  }
+
+  return (
+    <div style={{ ...styles.form, maxWidth: 520 }}>
+      <p style={styles.label}>Text extracted from photo</p>
+      <p
+        style={{
+          fontSize: "0.875rem",
+          color: "#555",
+          background: "#f9fafb",
+          borderRadius: 8,
+          padding: "0.75rem",
+          border: "1px solid #e5e7eb",
+          whiteSpace: "pre-wrap",
+          maxHeight: 160,
+          overflowY: "auto",
+        }}
+      >
+        {extractedText}
+      </p>
+      <p style={styles.label}>Confirm tags before transforming</p>
+      <div style={styles.toggleGroup}>
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            style={{
+              ...styles.toggleButton,
+              ...styles.toggleButtonActive,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.25rem",
+            }}
+          >
+            {tag}
+            <button
+              type="button"
+              onClick={() => removeTag(tag)}
+              style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", padding: 0, fontSize: "1rem", lineHeight: 1 }}
+              aria-label={`Remove ${tag}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: "0.375rem" }}>
+        <input
+          style={styles.textarea}
+          value={newTag}
+          onChange={(e) => setNewTag(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addTag(newTag);
+              setNewTag("");
+            }
+          }}
+          placeholder="Add tag…"
+        />
+        {newTag.trim() && (
+          <button
+            type="button"
+            style={styles.button}
+            onClick={() => { addTag(newTag); setNewTag(""); }}
+          >
+            Add
+          </button>
+        )}
+      </div>
+      <div style={{ display: "flex", gap: "0.75rem" }}>
+        <button
+          type="button"
+          style={styles.button}
+          onClick={() => onConfirm(tags)}
+        >
+          Confirm →
+        </button>
+        <button
+          type="button"
+          style={{ ...styles.button, background: "#fff", color: "#555", border: "1.5px solid #ddd" }}
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

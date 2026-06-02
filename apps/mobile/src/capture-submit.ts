@@ -11,6 +11,7 @@ export async function submitCapture(
   mode: string,
   tier: "free" | "paid",
   isOnline: boolean,
+  token: string | null,
   confirmedTags: string[] = [],
 ): Promise<SubmitResult> {
   if (!isOnline) {
@@ -22,7 +23,10 @@ export async function submitCapture(
       `${process.env.EXPO_PUBLIC_API_URL ?? ""}/api/v1/captures/transform`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ text, tier, confirmed_tags: confirmedTags }),
       }
     );

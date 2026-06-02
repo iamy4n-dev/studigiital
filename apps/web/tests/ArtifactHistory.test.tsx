@@ -43,6 +43,30 @@ function mockFetch(artifacts: object[], suggestions: string[] = [], existingTags
 }
 
 // ---------------------------------------------------------------------------
+// Slice 8 — artifacts fetch sends Authorization header when token provided
+// ---------------------------------------------------------------------------
+
+test("fetches /api/v1/artifacts/ with Authorization header when token provided", async () => {
+  global.fetch = jest.fn().mockImplementation((url: string) => {
+    if (url.includes("/api/v1/tags")) {
+      return Promise.resolve({ ok: true, json: async () => [] } as Response);
+    }
+    return Promise.resolve({ ok: true, json: async () => [] } as Response);
+  });
+
+  render(<ArtifactList getToken={async () => "test-token-abc"} />);
+
+  await waitFor(() => {
+    const calls = (global.fetch as jest.Mock).mock.calls as [string, RequestInit][];
+    const artifactCall = calls.find(([url]) => url.includes("/api/v1/artifacts"));
+    expect(artifactCall).toBeDefined();
+    expect(artifactCall![1].headers).toMatchObject({
+      Authorization: "Bearer test-token-abc",
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Slice 3 — drafts section appears before tagged section
 // ---------------------------------------------------------------------------
 

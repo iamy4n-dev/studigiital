@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     llm_provider: str = "anthropic"
     llm_base_url: str = "http://localhost:11434/v1"  # Ollama default; use :1234 for LM Studio
     llm_model_infer: str = "claude-haiku-4-5-20251001"
+    llm_model_ocr: str = "claude-haiku-4-5-20251001"
     llm_model_free: str = "claude-haiku-4-5-20251001"
     llm_model_paid: str = "claude-sonnet-4-6"
 
