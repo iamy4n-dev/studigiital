@@ -48,13 +48,13 @@ function SkillTestShell({ getToken }: { getToken: () => Promise<string | null> }
       const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
       let res: Response;
       if (skill === "suggest_tags") {
-        res = await fetch(`/api/v1/captures/suggest-tags`, {
+        res = await fetch("/api/v1/captures/suggest-tags", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ text: text.trim() }),
         });
       } else {
-        res = await fetch(`/api/v1/captures/transform`, {
+        res = await fetch("/api/v1/captures/transform", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ text: text.trim(), skill_name: skill, tier }),

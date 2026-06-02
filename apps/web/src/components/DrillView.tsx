@@ -6,7 +6,6 @@ import { XpToast } from "@/components/XpToast";
 import { ArtifactCard } from "@/components/DrillCards";
 import type { DrillItem } from "@/components/DrillCards";
 
-
 interface QueueResponse {
   items: DrillItem[];
   new_count: number;
@@ -70,7 +69,7 @@ export function DrillView({
   async function recordEvent(itemId: string, outcome: "passed" | "failed"): Promise<number> {
     const token = tokenRef.current;
     try {
-      const res = await fetch(`/api/v1/review/events`, {
+      const res = await fetch("/api/v1/review/events", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

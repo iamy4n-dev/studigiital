@@ -82,7 +82,7 @@ function CaptureShell({
       if (submitSkill !== "auto") body.skill_name = submitSkill;
       if (sourceArtifactId) body.source_artifact_id = sourceArtifactId;
       if (confirmedTags.length) body.confirmed_tags = confirmedTags;
-      const res = await fetch(`/api/v1/captures/transform`, {
+      const res = await fetch("/api/v1/captures/transform", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
