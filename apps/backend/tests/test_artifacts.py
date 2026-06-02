@@ -53,7 +53,7 @@ def override_deps() -> None:
 @pytest.mark.asyncio
 async def test_list_artifacts_includes_source_text() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get("/api/v1/artifacts/")
+        response = await client.get("/api/v1/artifacts")
 
     assert response.status_code == 200
     body = response.json()
@@ -64,7 +64,7 @@ async def test_list_artifacts_includes_source_text() -> None:
 @pytest.mark.asyncio
 async def test_list_artifacts_includes_tags() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get("/api/v1/artifacts/")
+        response = await client.get("/api/v1/artifacts")
 
     assert response.status_code == 200
     body = response.json()
@@ -75,7 +75,7 @@ async def test_list_artifacts_includes_tags() -> None:
 @pytest.mark.asyncio
 async def test_list_artifacts_includes_status() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get("/api/v1/artifacts/")
+        response = await client.get("/api/v1/artifacts")
 
     assert response.status_code == 200
     body = response.json()

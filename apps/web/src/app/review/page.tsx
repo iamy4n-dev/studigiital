@@ -73,7 +73,7 @@ function DrillSetup({
     async function load() {
       try {
         const token = await getToken();
-        const res = await fetch(`/api/v1/tags/`, {
+        const res = await fetch(`/api/v1/tags`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error(`${res.status}`);

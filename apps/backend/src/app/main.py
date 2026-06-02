@@ -53,6 +53,9 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs" if settings.debug else None,
     lifespan=lifespan,
+    # Disable automatic slash-redirects: they produce absolute-URL 307s that
+    # cross the Next.js proxy boundary, stripping Authorization headers in browsers.
+    redirect_slashes=False,
 )
 
 app.add_middleware(
