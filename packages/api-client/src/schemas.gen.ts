@@ -294,6 +294,42 @@ export const NoteTransformResponseSchema = {
     title: 'NoteTransformResponse'
 } as const;
 
+export const OcrRequestSchema = {
+    properties: {
+        media_key: {
+            type: 'string',
+            title: 'Media Key'
+        },
+        content_type: {
+            type: 'string',
+            title: 'Content Type',
+            default: 'image/jpeg'
+        }
+    },
+    type: 'object',
+    required: ['media_key'],
+    title: 'OcrRequest'
+} as const;
+
+export const OcrResponseSchema = {
+    properties: {
+        extracted_text: {
+            type: 'string',
+            title: 'Extracted Text'
+        },
+        suggested_tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Suggested Tags'
+        }
+    },
+    type: 'object',
+    required: ['extracted_text', 'suggested_tags'],
+    title: 'OcrResponse'
+} as const;
+
 export const QueueResponseSchema = {
     properties: {
         items: {

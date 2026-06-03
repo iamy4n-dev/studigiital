@@ -5,12 +5,19 @@ import { getByStatus, updateStatus } from "./capture-queue";
 
 const SYNC_TASK = "CAPTURE_QUEUE_SYNC";
 
+let _getToken: (() => Promise<string | null>) | null = null;
+
+export function configureSyncAuth(getToken: () => Promise<string | null>): void {
+  _getToken = getToken;
+}
+
 TaskManager.defineTask(SYNC_TASK, async () => {
   await drainQueue("free");
   return BackgroundTask.BackgroundTaskResult.Success;
 });
 
 export async function drainQueue(tier: "free" | "paid" = "free"): Promise<void> {
+  const token = _getToken ? await _getToken() : null;
   const pending = await getByStatus("pending");
   for (const capture of pending) {
     await updateStatus(capture.id, "syncing");
@@ -19,7 +26,10 @@ export async function drainQueue(tier: "free" | "paid" = "free"): Promise<void> 
         `${process.env.EXPO_PUBLIC_API_URL ?? ""}/api/v1/captures/transform`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({ text: capture.text, tier }),
         }
       );

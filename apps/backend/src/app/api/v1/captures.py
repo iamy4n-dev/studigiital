@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Literal
 
+from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -12,7 +13,7 @@ from app.core.auth import UserClaims, get_current_user
 from app.core.config import settings
 from app.core.db import get_session
 from app.core.llm import LLMBackend, get_llm_backend
-from app.core.s3 import generate_presigned_put_url
+from app.core.s3 import download_s3_object, generate_presigned_put_url
 from app.models.artifact import Artifact
 from app.models.artifact_item import ArtifactItem
 from app.models.capture import Capture
@@ -24,6 +25,7 @@ from app.skills.generate_flashcard import (
 from app.skills.generate_note import GenerateNoteInput, GenerateNoteSkill
 from app.skills.generate_quiz import GenerateQuizInput, GenerateQuizSkill, QuizQuestion
 from app.skills.infer_format import InferFormatInput
+from app.skills.ocr_extract import OcrExtractSkill
 from app.skills.registry import SkillRegistry
 from app.skills.suggest_tags import SuggestTagsInput, SuggestTagsSkill
 
@@ -105,6 +107,16 @@ class UploadUrlResponse(BaseModel):
     object_key: str
 
 
+class OcrRequest(BaseModel):
+    media_key: str
+    content_type: str = "image/jpeg"
+
+
+class OcrResponse(BaseModel):
+    extracted_text: str
+    suggested_tags: list[str]
+
+
 @router.post("/upload-url", response_model=UploadUrlResponse)
 async def get_upload_url(
     payload: UploadUrlRequest,
@@ -113,6 +125,28 @@ async def get_upload_url(
     object_key = f"captures/{user.user_id}/{uuid.uuid4()}/{payload.filename}"
     upload_url = generate_presigned_put_url(object_key, payload.content_type)
     return UploadUrlResponse(upload_url=upload_url, object_key=object_key)
+
+
+@router.post("/ocr", response_model=OcrResponse)
+async def ocr_capture(
+    payload: OcrRequest,
+    user: CurrentUser,
+    backend: LLMBackendDep,
+) -> OcrResponse:
+    if not payload.media_key.startswith(f"captures/{user.user_id}/"):
+        raise HTTPException(status_code=403, detail="Media key does not belong to current user")
+    try:
+        image_bytes = download_s3_object(payload.media_key)
+    except ClientError as exc:
+        code = exc.response["Error"]["Code"]
+        if code in ("NoSuchKey", "404"):
+            raise HTTPException(status_code=404, detail="Media object not found")
+        raise HTTPException(status_code=502, detail="Failed to retrieve media from storage")
+    ocr_skill = OcrExtractSkill(backend, settings.llm_model_ocr)
+    extracted_text = await ocr_skill.run(image_bytes, payload.content_type)
+    tags_skill = SuggestTagsSkill(backend, settings.llm_model_infer)
+    tags_out = await tags_skill.run(SuggestTagsInput(text=extracted_text))
+    return OcrResponse(extracted_text=extracted_text, suggested_tags=tags_out.suggestions)
 
 
 @router.post("/suggest-tags", response_model=SuggestTagsResponse)
@@ -276,10 +310,37 @@ async def create_capture(
 
 
 @router.get("/{capture_id}", response_model=CaptureOut)
-async def get_capture(capture_id: str) -> CaptureOut:
-    raise NotImplementedError
+async def get_capture(
+    capture_id: str, user: CurrentUser, session: SessionDep
+) -> CaptureOut:
+    stmt = select(Capture).where(Capture.id == capture_id, Capture.user_id == user.user_id)
+    result = (await session.execute(stmt)).scalar_one_or_none()
+    if result is None:
+        raise HTTPException(status_code=404, detail="Capture not found")
+    return CaptureOut(
+        id=result.id,
+        user_id=result.user_id,
+        mode=result.mode,
+        status=result.status,
+        created_at=result.created_at.isoformat(),
+    )
 
 
 @router.get("/", response_model=list[CaptureOut])
-async def list_captures() -> list[CaptureOut]:
-    raise NotImplementedError
+async def list_captures(user: CurrentUser, session: SessionDep) -> list[CaptureOut]:
+    stmt = (
+        select(Capture)
+        .where(Capture.user_id == user.user_id)
+        .order_by(Capture.created_at.desc())
+    )
+    rows = (await session.execute(stmt)).scalars().all()
+    return [
+        CaptureOut(
+            id=c.id,
+            user_id=c.user_id,
+            mode=c.mode,
+            status=c.status,
+            created_at=c.created_at.isoformat(),
+        )
+        for c in rows
+    ]

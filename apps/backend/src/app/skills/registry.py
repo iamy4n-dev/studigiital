@@ -6,6 +6,7 @@ from app.skills.generate_flashcard import GenerateFlashcardSkill
 from app.skills.generate_note import GenerateNoteSkill
 from app.skills.generate_quiz import GenerateQuizSkill
 from app.skills.infer_format import InferFormatSkill
+from app.skills.ocr_extract import OcrExtractSkill
 
 
 class SkillRegistry:
@@ -14,6 +15,9 @@ class SkillRegistry:
 
     def get_infer_skill(self) -> InferFormatSkill:
         return InferFormatSkill(self._backend, settings.llm_model_infer)
+
+    def get_ocr_skill(self) -> OcrExtractSkill:
+        return OcrExtractSkill(self._backend, settings.llm_model_ocr)
 
     def get_generate_skill(
         self, skill_name: str, tier: str

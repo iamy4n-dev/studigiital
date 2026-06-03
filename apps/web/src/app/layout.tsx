@@ -8,6 +8,9 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Studigital",
   description: "Capture, transform, and review your learning moments",
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 const devMode = process.env.NEXT_PUBLIC_DEV_MODE === "true";

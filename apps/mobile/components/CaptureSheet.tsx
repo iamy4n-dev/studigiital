@@ -13,7 +13,7 @@ import {
 
 import type { TransformResponse } from "@studigiital/api-client";
 import type { learning_type } from "@studigiital/api-client";
-import { useUser } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 
 import { getPlaceholder } from "../src/capture-placeholder";
 import type { CaptureMode } from "../src/capture-mode-prefs";
@@ -41,6 +41,7 @@ interface Props {
 
 export default function CaptureSheet({ visible, onClose }: Props) {
   const { tier } = useSession();
+  const { getToken } = useAuth();
   const { user } = useUser();
   const learningType = (user?.publicMetadata?.learning_type as learning_type | undefined) ?? null;
 
@@ -68,7 +69,8 @@ export default function CaptureSheet({ visible, onClose }: Props) {
     if (!text.trim()) return;
     setPhase({ id: "suggesting_tags" });
 
-    const suggestions = await fetchTagSuggestions(text.trim());
+    const token = await getToken();
+    const suggestions = await fetchTagSuggestions(text.trim(), [], token);
     setPhase({ id: "tag_confirmation", suggestions, confirmed: suggestions });
   }
 
@@ -81,7 +83,8 @@ export default function CaptureSheet({ visible, onClose }: Props) {
     const networkState = await Network.getNetworkStateAsync().catch(() => ({ isConnected: true, isInternetReachable: true }));
     const isOnline = !!(networkState.isConnected && networkState.isInternetReachable !== false);
 
-    const result = await submitCapture(text.trim(), "quick_text", tier, isOnline, confirmedTags);
+    const token = await getToken();
+    const result = await submitCapture(text.trim(), "quick_text", tier, isOnline, token, confirmedTags);
 
     if (result.status === "success") {
       setPhase({ id: "result", result: result.result });
