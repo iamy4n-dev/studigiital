@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     llm_provider: str = "anthropic"
     openrouter_api_key: str = ""
     llm_base_url: str = "http://localhost:11434/v1"  # Ollama default; use :1234 for LM Studio
+    llm_api_key: str = "local"  # "local" works for Ollama/LM Studio; set a real key for OpenRouter
     llm_model_infer: str = "claude-haiku-4-5-20251001"
     llm_model_ocr: str = "claude-haiku-4-5-20251001"
     llm_model_free: str = "claude-haiku-4-5-20251001"

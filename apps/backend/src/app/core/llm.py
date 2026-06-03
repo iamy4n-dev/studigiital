@@ -99,12 +99,12 @@ class AnthropicBackend(LLMBackend):
 
 
 class OpenAICompatBackend(LLMBackend):
-    """Works with Ollama (http://localhost:11434/v1) and LM Studio (http://localhost:1234/v1)."""
+    """Works with Ollama, LM Studio, OpenRouter, or any OpenAI-compatible endpoint."""
 
     def __init__(self) -> None:
         self._client = openai.AsyncOpenAI(
             base_url=settings.llm_base_url,
-            api_key="local",  # local servers don't verify the key; SDK requires a non-empty value
+            api_key=settings.llm_api_key,
         )
 
     async def call_structured(
