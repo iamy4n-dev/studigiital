@@ -21,7 +21,9 @@ async def test_call_structured_returns_parsed_json() -> None:
 
     with patch("app.core.llm.litellm.acompletion", new=AsyncMock(return_value=mock_response)):
         backend = OpenRouterBackend()
-        result = await backend.call_structured("prompt", {"type": "object"}, "google/gemma-3-27b-it")
+        result = await backend.call_structured(
+            "prompt", {"type": "object"}, "google/gemma-3-27b-it"
+        )
 
     assert result == {"front": "Q", "back": "A"}
 
@@ -59,7 +61,9 @@ async def test_call_vision_returns_text_content() -> None:
 
     with patch("app.core.llm.litellm.acompletion", new=AsyncMock(return_value=mock_response)):
         backend = OpenRouterBackend()
-        result = await backend.call_vision(b"\xff\xd8\xff", "image/jpeg", "Read this", "google/gemma-3-27b-it")
+        result = await backend.call_vision(
+            b"\xff\xd8\xff", "image/jpeg", "Read this", "google/gemma-3-27b-it"
+        )
 
     assert result == "Extracted text from image"
 
@@ -75,7 +79,9 @@ async def test_call_vision_returns_empty_string_when_content_none() -> None:
 
     with patch("app.core.llm.litellm.acompletion", new=AsyncMock(return_value=mock_response)):
         backend = OpenRouterBackend()
-        result = await backend.call_vision(b"\x89PNG", "image/png", "Read this", "google/gemma-3-27b-it")
+        result = await backend.call_vision(
+            b"\x89PNG", "image/png", "Read this", "google/gemma-3-27b-it"
+        )
 
     assert result == ""
 
