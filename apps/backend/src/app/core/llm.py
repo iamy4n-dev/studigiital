@@ -182,7 +182,7 @@ class OpenRouterBackend(LLMBackend):
             ],
             tool_choice="required",
         )
-        args = response.choices[0].message.tool_calls[0].function.arguments  # type: ignore[index, union-attr]
+        args = response.choices[0].message.tool_calls[0].function.arguments
         return json.loads(args)  # type: ignore[no-any-return]
 
     async def call_vision(
@@ -207,8 +207,8 @@ class OpenRouterBackend(LLMBackend):
                 }
             ],
         )
-        content = response.choices[0].message.content  # type: ignore[union-attr]
-        return content or ""  # type: ignore[return-value]
+        content = response.choices[0].message.content
+        return content or ""
 
 
 def get_llm_backend() -> LLMBackend:
